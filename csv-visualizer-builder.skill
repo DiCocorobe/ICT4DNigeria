@@ -1,0 +1,43 @@
+# CSV Visualizer Builder Skill
+
+This skill enables Gemini CLI to autonomously build interactive, web-based CSV visualizers. It provides a structured workflow for analyzing CSV data, designing a dashboard, and implementing a functional prototype using modern web technologies.
+
+## Instructions
+
+When this skill is activated, follow these expert procedural guidelines:
+
+1.  **Data Analysis Phase:**
+    *   Read the provided CSV file(s) to understand the structure, data types, and potential insights.
+    *   Identify key metrics, categories, and trends that would be valuable to visualize.
+    *   Check for data quality issues (missing values, inconsistent formatting) and propose cleaning steps if necessary.
+
+2.  **Design & Planning Phase:**
+    *   **Mandatory:** Use `enter_plan_mode` to draft a design document.
+    *   Propose a layout for the dashboard (e.g., sidebar for filters, main area for charts).
+    *   Select appropriate chart types for the data (e.g., bar charts for comparisons, line charts for trends, pie charts for distributions).
+    *   Define the interactive elements (e.g., dropdowns to filter by category, date range pickers).
+    *   **Aesthetics:** Plan for a modern, clean look using a consistent color palette and responsive design.
+
+3.  **Implementation Phase:**
+    *   **Frontend:** Use React (TypeScript) with Vanilla CSS for the dashboard.
+    *   **Data Handling:** Use a library like `PapaParse` for client-side CSV parsing.
+    *   **Visualization:** Use `Recharts` or `Chart.js` for creating interactive charts.
+    *   **Styling:** Prioritize Vanilla CSS. Ensure the dashboard is visually appealing and "alive" with hover effects and smooth transitions.
+    *   **Structure:** Create a modular component architecture (e.g., `Dashboard`, `Sidebar`, `ChartContainer`, `DataTable`).
+
+4.  **Validation Phase:**
+    *   Verify that the CSV data is correctly parsed and displayed.
+    *   Test all interactive filters and ensure charts update dynamically.
+    *   Check the responsiveness of the dashboard on different screen sizes.
+    *   Ensure the code follows project conventions and is well-documented.
+
+## Available Resources
+
+*   **Libraries:** `react`, `typescript`, `recharts`, `papaparse`, `lucide-react` (for icons).
+*   **Templates:** Look for existing dashboard patterns in the codebase to maintain consistency.
+
+## Constraints
+
+*   **No TailwindCSS:** Use Vanilla CSS as per the primary workflow.
+*   **Local Assets:** Only use locally generated or standard web assets.
+*   **Functional Prototype:** The goal is a substantially complete and functional tool, not just a static mockup.
