@@ -6,7 +6,7 @@
     <title>Nigeria Conflict Analysis Dashboard</title>
     
     <!-- CSS Dependencies -->
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin=""/>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     
     <style>
@@ -55,26 +55,23 @@
         .btn-primary { background: var(--primary); color: white; border: none; }
 
         #error-console {
-            position: fixed;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            background: rgba(239, 68, 68, 0.9);
-            color: white;
-            padding: 10px;
-            font-family: monospace;
-            font-size: 12px;
-            z-index: 10000;
-            display: none;
-            max-height: 100px;
-            overflow-y: auto;
+            position: fixed; bottom: 0; left: 0; right: 0;
+            background: rgba(239, 68, 68, 0.95); color: white; padding: 15px;
+            font-family: monospace; font-size: 12px; z-index: 10000;
+            display: none; max-height: 150px; overflow-y: auto; border-top: 2px solid white;
         }
 
         .loading-screen {
             position: fixed; top: 0; left: 0; right: 0; bottom: 0;
-            background: var(--bg); display: flex; flex-direction: column;
+            background: #f8fafc; display: flex; flex-direction: column;
             align-items: center; justify-content: center; z-index: 9999;
         }
+        
+        /* Simple Chart CSS */
+        .simple-bar { fill: #2563eb; transition: 0.3s; cursor: pointer; }
+        .simple-bar:hover { fill: #1d4ed8; }
+        .chart-axis { stroke: #cbd5e1; stroke-width: 1; }
+        .chart-text { font-size: 10px; fill: #64748b; }
         
         @media (max-width: 768px) {
             #root { flex-direction: column; }
@@ -84,45 +81,96 @@
     </style>
 </head>
 <body class="light">
-    <div id="error-console"></div>
+    <div id="error-console">
+        <div style="font-weight: bold; margin-bottom: 5px;">⚠️ SYSTEM ERROR CONSOLE</div>
+    </div>
     <div id="loading-screen" class="loading-screen">
-        <div style="font-weight: 600; margin-bottom: 10px;">Loading Dashboard Components...</div>
-        <div id="loading-status" style="font-size: 0.8rem; opacity: 0.7;">Initializing React & Libraries</div>
+        <div style="font-weight: 700; font-size: 1.2rem; color: #2563eb; margin-bottom: 12px;">Nigeria Conflict Dashboard</div>
+        <div id="loading-status" style="font-size: 0.9rem; color: #64748b;">Initializing Data Visualizer...</div>
     </div>
     
     <div id="root"></div>
 
-    <!-- JS Dependencies -->
+    <!-- JS Dependencies with CrossOrigin -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script crossorigin src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script crossorigin src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+
     <script>
-        window.onerror = function(msg, url, line) {
-            const console = document.getElementById('error-console');
-            console.style.display = 'block';
-            console.innerHTML += `<div>Error: ${msg} at ${line}</div>`;
+        // Enhanced Global Error Handler
+        window.onerror = function(msg, url, line, col, error) {
+            const consoleBox = document.getElementById('error-console');
+            consoleBox.style.display = 'block';
+            consoleBox.innerHTML += `<div style="margin-top:4px;">• [Line ${line}] ${msg}</div>`;
+            document.getElementById('loading-status').innerHTML = `<span style="color:red">Fatal Error: ${msg}</span>`;
+            return false;
         };
     </script>
-    
-    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
-    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
-    <script src="https://unpkg.com/recharts/umd/Recharts.js"></script>
 
     <script type="text/babel">
         const { useState, useEffect, useMemo, useRef } = React;
-        const { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } = Recharts;
 
-        const REGIONS = {
-            'North West': ['Sokoto', 'Kebbi', 'Zamfara', 'Katsina', 'Kano', 'Jigawa', 'Kaduna'],
-            'North East': ['Yobe', 'Borno', 'Bauchi', 'Gombe', 'Adamawa', 'Taraba']
-        };
+        // --- Custom SVG Bar Chart (Zero Dependency) ---
+        const SimpleChart = ({ data, isDark }) => {
+            if (!data || data.length === 0) return <div style={{fontSize: '0.8rem', opacity: 0.5}}>No data for chart</div>;
+            
+            const width = 350;
+            const height = 120;
+            const padding = 20;
+            const maxValue = Math.max(...data.map(d => d.events)) || 1;
+            const barWidth = (width - padding * 2) / data.length;
 
-        const getIntensityColor = (deaths) => {
-            const d = parseInt(deaths) || 0;
-            if (d > 100) return '#7f1d1d';
-            if (d > 50) return '#ef4444';
-            if (d > 10) return '#f97316';
-            return '#fbbf24';
+            return (
+                <div style={{marginTop: '10px'}}>
+                    <div style={{fontSize: '0.875rem', fontWeight: 600, marginBottom: '8px'}}>Annual Conflict Events</div>
+                    <svg width="100%" height={height} viewBox={`0 0 ${width} ${height}`} preserveAspectRatio="xMidYMid meet">
+                        {/* Y-Axis Grid */}
+                        {[0, 0.5, 1].map(tick => (
+                            <line 
+                                key={tick}
+                                x1={padding} 
+                                y1={height - padding - (tick * (height - padding * 2))}
+                                x2={width - padding} 
+                                y2={height - padding - (tick * (height - padding * 2))}
+                                stroke={isDark ? '#334155' : '#e2e8f0'}
+                                strokeDasharray="4"
+                            />
+                        ))}
+                        
+                        {/* Bars */}
+                        {data.map((d, i) => {
+                            const barHeight = (d.events / maxValue) * (height - padding * 2);
+                            return (
+                                <g key={d.year}>
+                                    <rect 
+                                        x={padding + i * barWidth + 2}
+                                        y={height - padding - barHeight}
+                                        width={barWidth - 4}
+                                        height={barHeight}
+                                        className="simple-bar"
+                                        rx="2"
+                                    >
+                                        <title>{d.year}: {d.events} events</title>
+                                    </rect>
+                                    {(i % 5 === 0 || i === data.length - 1) && (
+                                        <text 
+                                            x={padding + i * barWidth + barWidth/2} 
+                                            y={height - 5} 
+                                            textAnchor="middle" 
+                                            className="chart-text"
+                                            fill={isDark ? '#94a3b8' : '#64748b'}
+                                        >
+                                            {d.year}
+                                        </text>
+                                    )}
+                                </g>
+                            );
+                        })}
+                    </svg>
+                </div>
+            );
         };
 
         const MapContainer = ({ points, isDark }) => {
@@ -151,8 +199,11 @@
                     points.forEach(p => {
                         const lat = parseFloat(p.latitude), lon = parseFloat(p.longitude);
                         if (!isNaN(lat) && !isNaN(lon)) {
+                            const d = parseInt(p.best) || 0;
+                            const color = d > 100 ? '#7f1d1d' : d > 50 ? '#ef4444' : d > 10 ? '#f97316' : '#fbbf24';
+                            
                             L.circleMarker([lat, lon], {
-                                radius: 6, fillColor: getIntensityColor(p.best), color: isDark ? "#fff" : "#000",
+                                radius: 6, fillColor: color, color: isDark ? "#fff" : "#000",
                                 weight: 0.5, opacity: 1, fillOpacity: 0.8
                             })
                             .bindPopup(`
@@ -178,13 +229,16 @@
             const [filters, setFilters] = useState({ type: 'all', state: 'all', minYear: 2000 });
 
             useEffect(() => {
-                document.getElementById('loading-status').innerText = "Downloading Conflict Data (3.5MB)...";
+                document.getElementById('loading-status').innerText = "Loading Nigeria Conflict Data...";
                 Papa.parse('filtered_conflict_data.csv', {
                     download: true, header: true, skipEmptyLines: true,
                     complete: (results) => {
                         setData(results.data.filter(d => d.latitude && d.longitude));
                         setLoading(false);
                         document.getElementById('loading-screen').style.display = 'none';
+                    },
+                    error: (err) => {
+                        document.getElementById('loading-status').innerText = "Error: Could not load data.";
                     }
                 });
             }, []);
@@ -213,12 +267,12 @@
                 <div id="root">
                     <div className="sidebar">
                         <div className="header">
-                            <h1>Nigeria Conflict Map</h1>
-                            <p>North West & North East analysis (2000-2024)</p>
+                            <h1>Conflict Dashboard</h1>
+                            <p>Analysis of Northern Nigeria (2000-2024)</p>
                         </div>
                         <div className="controls">
                             <button className="btn" onClick={() => setIsDark(!isDark)}>{isDark ? '☀️ Light' : '🌙 Dark'}</button>
-                            <button className="btn btn-primary" onClick={() => window.open('https://github.com/dicocorobe/ICT4DNigeria')}>📁 Repo</button>
+                            <button className="btn btn-primary" onClick={() => window.open('https://github.com/dicocorobe/ICT4DNigeria')}>📁 Source</button>
                         </div>
                         <div className="stats-grid">
                             <div className="stat-card nw"><div className="stat-label">North West</div><div className="stat-value">{nwCount}</div></div>
@@ -235,34 +289,19 @@
                                 </select>
                             </div>
                             <div className="filter-group">
-                                <label>State</label>
-                                <select onChange={e => setFilters({...filters, state: e.target.value})}>
-                                    <option value="all">All States</option>
-                                    {Object.values(REGIONS).flat().map(s => <option key={s} value={s}>{s}</option>)}
-                                </select>
-                            </div>
-                            <div className="filter-group">
                                 <label>From Year: {filters.minYear}</label>
                                 <input type="range" min="2000" max="2024" value={filters.minYear} onChange={e => setFilters({...filters, minYear: parseInt(e.target.value)})} />
                             </div>
                         </div>
-                        <div style={{ marginTop: 'auto', height: '150px' }}>
-                            <ResponsiveContainer width="100%" height="100%">
-                                <BarChart data={chartData}>
-                                    <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                                    <XAxis dataKey="year" fontSize={10} />
-                                    <Tooltip />
-                                    <Bar dataKey="events" fill="#2563eb" />
-                                </BarChart>
-                            </ResponsiveContainer>
-                        </div>
+                        <SimpleChart data={chartData} isDark={isDark} />
                     </div>
                     <MapContainer points={filteredData} isDark={isDark} />
                 </div>
             );
         };
 
-        ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
     </script>
 </body>
 </html>
