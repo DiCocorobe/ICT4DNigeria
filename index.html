@@ -3,367 +3,595 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Nigeria Conflict Analysis Instrument</title>
-    <!-- Leaflet CSS -->
+    <title>Nigeria Conflict Analysis Dashboard</title>
+    
+    <!-- CSS Dependencies -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
-    <!-- Google Fonts -->
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
     <style>
         :root {
-            --bg-light: #f8f9fa;
-            --text-light: #212529;
-            --panel-light: #ffffff;
-            --border-light: #dee2e6;
-            
-            --bg-dark: #1a1d20;
-            --text-dark: #e9ecef;
-            --panel-dark: #2c3034;
-            --border-dark: #495057;
-            
-            --primary: #007bff;
-            --nw-color: #28a745;
-            --ne-color: #dc3545;
+            --primary: #2563eb;
+            --primary-hover: #1d4ed8;
+            --bg: #f8fafc;
+            --text: #0f172a;
+            --panel: #ffffff;
+            --border: #e2e8f0;
+            --nw: #10b981;
+            --ne: #ef4444;
+            --shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
         }
 
-        body, html {
+        .dark {
+            --bg: #0f172a;
+            --text: #f8fafc;
+            --panel: #1e293b;
+            --border: #334155;
+            --shadow: 0 4px 6px -1px rgb(0 0 0 / 0.2);
+        }
+
+        * {
+            box-sizing: border-box;
             margin: 0;
             padding: 0;
-            height: 100%;
+        }
+
+        body {
             font-family: 'Inter', sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            height: 100vh;
             overflow: hidden;
             transition: background-color 0.3s, color 0.3s;
         }
 
-        body.light-mode { background-color: var(--bg-light); color: var(--text-light); }
-        body.dark-mode { background-color: var(--bg-dark); color: var(--text-dark); }
-
-        #app {
+        #root {
             display: flex;
             height: 100vh;
             width: 100vw;
         }
 
-        /* Sidebar Styling */
-        #sidebar {
-            width: 350px;
-            padding: 20px;
+        /* Sidebar */
+        .sidebar {
+            width: 400px;
+            background-color: var(--panel);
+            border-right: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            padding: 24px;
             overflow-y: auto;
             z-index: 1000;
-            box-shadow: 2px 0 5px rgba(0,0,0,0.1);
-            transition: background-color 0.3s;
-        }
-        .light-mode #sidebar { background-color: var(--panel-light); border-right: 1px solid var(--border-light); }
-        .dark-mode #sidebar { background-color: var(--panel-dark); border-right: 1px solid var(--border-dark); }
-
-        /* Map Styling */
-        #map {
-            flex-grow: 1;
-            height: 100%;
+            box-shadow: var(--shadow);
         }
 
-        /* UI Elements */
-        h1 { font-size: 1.25rem; margin-bottom: 0.5rem; }
-        .description { font-size: 0.85rem; opacity: 0.8; margin-bottom: 1.5rem; }
-        
-        .filter-group { margin-bottom: 1.5rem; }
-        .filter-group label { display: block; font-weight: 600; margin-bottom: 0.5rem; font-size: 0.9rem; }
-        
-        select, input[type="range"] {
-            width: 100%;
-            padding: 8px;
-            border-radius: 4px;
-            border: 1px solid #ccc;
-            background: transparent;
-            color: inherit;
+        .header {
+            margin-bottom: 24px;
         }
 
-        .stats-box {
-            padding: 15px;
-            border-radius: 8px;
-            margin-bottom: 1rem;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
+        .header h1 {
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin-bottom: 8px;
+            color: var(--primary);
         }
-        .stats-box.nw { background-color: rgba(40, 167, 69, 0.15); border: 1px solid var(--nw-color); }
-        .stats-box.ne { background-color: rgba(220, 53, 69, 0.15); border: 1px solid var(--ne-color); }
-        .stats-val { font-size: 1.2rem; font-weight: 600; }
-        .stats-label { font-size: 0.8rem; }
 
-        .legend {
-            font-size: 0.8rem;
+        .header p {
+            font-size: 0.875rem;
+            opacity: 0.7;
             line-height: 1.5;
-            padding: 10px;
-            border-radius: 4px;
-            margin-top: 10px;
         }
-        .legend i { width: 12px; height: 12px; float: left; margin-right: 8px; border-radius: 50%; }
 
-        .toggle-btn {
-            background: var(--primary);
-            color: white;
-            border: none;
-            padding: 10px 15px;
-            border-radius: 4px;
-            cursor: pointer;
-            width: 100%;
-            margin-top: 1rem;
+        /* Stats Cards */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-bottom: 24px;
+        }
+
+        .stat-card {
+            padding: 16px;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            background-color: var(--bg);
+        }
+
+        .stat-card.nw { border-left: 4px solid var(--nw); }
+        .stat-card.ne { border-left: 4px solid var(--ne); }
+
+        .stat-label {
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            opacity: 0.6;
+            margin-bottom: 4px;
+        }
+
+        .stat-value {
+            font-size: 1.25rem;
+            font-weight: 700;
+        }
+
+        /* Filters */
+        .filter-section {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+
+        .filter-group {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .filter-group label {
+            font-size: 0.875rem;
             font-weight: 600;
         }
 
-        .comparison-panel {
-            margin-top: 2rem;
-            padding-top: 1rem;
-            border-top: 1px solid #888;
+        select, input[type="range"] {
+            width: 100%;
+            padding: 10px;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            background-color: var(--panel);
+            color: var(--text);
+            font-family: inherit;
+            font-size: 0.875rem;
+        }
+
+        .year-display {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.75rem;
+            font-weight: 500;
+            opacity: 0.7;
+        }
+
+        /* Chart */
+        .chart-container {
+            margin-top: auto;
+            padding-top: 24px;
+            border-top: 1px solid var(--border);
+        }
+
+        .chart-title {
+            font-size: 0.875rem;
+            font-weight: 600;
+            margin-bottom: 12px;
+        }
+
+        /* Map */
+        #map {
+            flex-grow: 1;
+            height: 100%;
+            background-color: #aad3df;
+        }
+
+        /* Legend */
+        .legend {
+            background: var(--panel);
+            padding: 12px;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            box-shadow: var(--shadow);
+            font-size: 0.75rem;
+            line-height: 1.6;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+        }
+
+        /* Controls */
+        .controls {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 24px;
+        }
+
+        .btn {
+            flex: 1;
+            padding: 10px;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            background-color: var(--panel);
+            color: var(--text);
+            font-size: 0.875rem;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            transition: all 0.2s;
+        }
+
+        .btn:hover {
+            background-color: var(--border);
+        }
+
+        .btn-primary {
+            background-color: var(--primary);
+            color: white;
+            border: none;
+        }
+
+        .btn-primary:hover {
+            background-color: var(--primary-hover);
+        }
+
+        /* Mobile */
+        @media (max-width: 768px) {
+            #root { flex-direction: column; }
+            .sidebar { width: 100%; height: 50vh; }
+            #map { height: 50vh; }
+        }
+
+        /* Loading Overlay */
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.7);
+            color: white;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+            backdrop-filter: blur(4px);
+        }
+
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid rgba(255,255,255,0.3);
+            border-radius: 50%;
+            border-top-color: white;
+            animation: spin 1s linear infinite;
+            margin-bottom: 16px;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
         }
     </style>
 </head>
-<body class="light-mode">
-    <div id="app">
-        <div id="sidebar">
-            <h1>Nigeria Conflict Map</h1>
-            <div id="loadingStatus" style="color: var(--primary); font-weight: bold; margin-bottom: 1rem;">Loading Data...</div>
-            <p class="description">Interactive instrument for North West & North East regional analysis (2000-Present).</p>
-            
-            <button id="themeToggle" class="toggle-btn">Switch to Dark Mode</button>
+<body class="light">
+    <div id="root"></div>
 
-            <div class="comparison-panel">
-                <label>Regional Comparison (Live Data)</label>
-                <div class="stats-box nw">
-                    <div>
-                        <div class="stats-label">NORTH WEST</div>
-                        <div id="nw-count" class="stats-val">0</div>
-                    </div>
-                    <div class="stats-label">Total Events</div>
-                </div>
-                <div class="stats-box ne">
-                    <div>
-                        <div class="stats-label">NORTH EAST</div>
-                        <div id="ne-count" class="stats-val">0</div>
-                    </div>
-                    <div class="stats-label">Total Events</div>
-                </div>
-            </div>
-
-            <div class="filter-group">
-                <label for="typeFilter">Conflict Type</label>
-                <select id="typeFilter">
-                    <option value="all">All Types</option>
-                    <option value="State-based conflict">State-based conflict</option>
-                    <option value="Non-state conflict">Non-state conflict</option>
-                    <option value="One-sided violence">One-sided violence</option>
-                </select>
-            </div>
-
-            <div class="filter-group">
-                <label for="stateFilter">State (13 Regions)</label>
-                <select id="stateFilter">
-                    <option value="all">All States</option>
-                    <optgroup label="North West">
-                        <option value="Sokoto">Sokoto</option>
-                        <option value="Kebbi">Kebbi</option>
-                        <option value="Zamfara">Zamfara</option>
-                        <option value="Katsina">Katsina</option>
-                        <option value="Kano">Kano</option>
-                        <option value="Jigawa">Jigawa</option>
-                        <option value="Kaduna">Kaduna</option>
-                    </optgroup>
-                    <optgroup label="North East">
-                        <option value="Yobe">Yobe</option>
-                        <option value="Borno">Borno</option>
-                        <option value="Bauchi">Bauchi</option>
-                        <option value="Gombe">Gombe</option>
-                        <option value="Adamawa">Adamawa</option>
-                        <option value="Taraba">Taraba</option>
-                    </optgroup>
-                </select>
-            </div>
-
-            <div class="filter-group">
-                <label>Year Range: <span id="yearVal">2000 - 2026</span></label>
-                <input type="range" id="yearFilter" min="2000" max="2026" value="2000">
-            </div>
-
-            <div class="filter-group">
-                <label for="fatalFilter">Minimum Fatalities</label>
-                <select id="fatalFilter">
-                    <option value="0">Show All</option>
-                    <option value="1">1+ Deaths</option>
-                    <option value="10">10+ Deaths</option>
-                    <option value="50">50+ Deaths</option>
-                    <option value="100">100+ Deaths</option>
-                </select>
-            </div>
-
-            <div class="legend">
-                <strong>Fatalities Intensity</strong><br>
-                <i style="background: #ffffb2"></i> 0-1 Deaths<br>
-                <i style="background: #fed976"></i> 2-10 Deaths<br>
-                <i style="background: #feb24c"></i> 11-50 Deaths<br>
-                <i style="background: #fd8d3c"></i> 51-100 Deaths<br>
-                <i style="background: #e31a1c"></i> 100+ Deaths
-            </div>
-        </div>
-        <div id="map"></div>
-    </div>
-
-    <!-- Scripts -->
+    <!-- JS Dependencies -->
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+    <script src="https://unpkg.com/recharts/umd/Recharts.js"></script>
 
-    <script>
-        // Configuration
-        const MAP_CENTER = [11.5, 10.0]; // Centered on North Nigeria
-        const ZOOM_LEVEL = 6;
-        
-        let map, markerLayer, allData = [], currentMode = 'light';
-        
-        // Tile Layers
-        const lightTiles = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
-            attribution: '&copy; OpenStreetMap &copy; CARTO'
-        });
-        const darkTiles = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-            attribution: '&copy; OpenStreetMap &copy; CARTO'
-        });
+    <script type="text/babel">
+        const { useState, useEffect, useMemo, useRef } = React;
+        const { 
+            LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar
+        } = Recharts;
 
-        function initMap() {
-            map = L.map('map').setView(MAP_CENTER, ZOOM_LEVEL);
-            lightTiles.addTo(map);
-            markerLayer = L.layerGroup().addTo(map);
-        }
+        // --- Constants ---
+        const REGIONS = {
+            'North West': ['Sokoto', 'Kebbi', 'Zamfara', 'Katsina', 'Kano', 'Jigawa', 'Kaduna'],
+            'North East': ['Yobe', 'Borno', 'Bauchi', 'Gombe', 'Adamawa', 'Taraba']
+        };
 
-        function getColor(fatalities) {
-            const f = parseInt(fatalities) || 0;
-            return f > 100 ? '#e31a1c' :
-                   f > 50  ? '#fd8d3c' :
-                   f > 10  ? '#feb24c' :
-                   f > 1   ? '#fed976' :
-                             '#ffffb2';
-        }
+        const CONFLICT_TYPES = [
+            'State-based conflict',
+            'Non-state conflict',
+            'One-sided violence'
+        ];
 
-        function updateStats(filteredData) {
-            const nw = filteredData.filter(d => d.Analysis_Region && d.Analysis_Region.trim() === 'North West').length;
-            const ne = filteredData.filter(d => d.Analysis_Region && d.Analysis_Region.trim() === 'North East').length;
-            document.getElementById('nw-count').innerText = nw.toLocaleString();
-            document.getElementById('ne-count').innerText = ne.toLocaleString();
-        }
+        const INTENSITY_COLORS = {
+            'low': '#fbbf24',    // 0-10
+            'medium': '#f97316', // 11-50
+            'high': '#ef4444',   // 51-100
+            'extreme': '#7f1d1d' // 100+
+        };
 
-        function applyFilters() {
-            if (!allData || allData.length === 0) return;
+        // --- Helpers ---
+        const getIntensityColor = (deaths) => {
+            const d = parseInt(deaths) || 0;
+            if (d > 100) return INTENSITY_COLORS.extreme;
+            if (d > 50) return INTENSITY_COLORS.high;
+            if (d > 10) return INTENSITY_COLORS.medium;
+            return INTENSITY_COLORS.low;
+        };
+
+        // --- Components ---
+
+        const StatCard = ({ label, value, type }) => (
+            <div className={`stat-card ${type}`}>
+                <div className="stat-label">{label}</div>
+                <div className="stat-value">{value.toLocaleString()}</div>
+            </div>
+        );
+
+        const App = () => {
+            const [data, setData] = useState([]);
+            const [loading, setLoading] = useState(true);
+            const [error, setError] = useState(null);
+            const [isDark, setIsDark] = useState(false);
             
-            const type = document.getElementById('typeFilter').value;
-            const state = document.getElementById('stateFilter').value;
-            const year = parseInt(document.getElementById('yearFilter').value);
-            const minFatal = parseInt(document.getElementById('fatalFilter').value);
-            
-            document.getElementById('yearVal').innerText = `${year} - 2026`;
-
-            markerLayer.clearLayers();
-            
-            const filtered = allData.filter(d => {
-                if (!d || !d.year || !d.adm_1) return false;
-                
-                const matchType = type === 'all' || d.official_conflict_type === type;
-                const matchState = state === 'all' || d.adm_1.toLowerCase().includes(state.toLowerCase());
-                const matchYear = parseInt(d.year) >= year;
-                const matchFatal = (parseInt(d.best) || 0) >= minFatal;
-                return matchType && matchState && matchYear && matchFatal;
+            const [filters, setFilters] = useState({
+                type: 'all',
+                state: 'all',
+                minYear: 2000,
+                maxYear: 2026,
+                minFatalities: 0
             });
 
-            console.log(`Filtered data: ${filtered.length} points found.`);
-
-            filtered.forEach(d => {
-                const lat = parseFloat(d.latitude);
-                const lon = parseFloat(d.longitude);
-                if (!isNaN(lat) && !isNaN(lon)) {
-                    L.circleMarker([lat, lon], {
-                        radius: 6,
-                        fillColor: getColor(d.best),
-                        color: "#000",
-                        weight: 1,
-                        opacity: 1,
-                        fillOpacity: 0.8
-                    })
-                    .bindPopup(`
-                        <strong>${d.conflict_name || 'Conflict'}</strong><br>
-                        Type: ${d.official_conflict_type}<br>
-                        Location: ${d.adm_1}, ${d.adm_2}<br>
-                        Date: ${d.date_start ? d.date_start.split(' ')[0] : 'N/A'}<br>
-                        Fatalities: ${d.best || 0}
-                    `)
-                    .addTo(markerLayer);
-                }
-            });
-
-            updateStats(filtered);
-        }
-
-        // Initialize App
-        document.addEventListener('DOMContentLoaded', () => {
-            initMap();
-            
-            const loadingStatus = document.getElementById('loadingStatus');
-            const dataPath = 'filtered_conflict_data.csv';
-            
-            console.log("Attempting to fetch data from:", dataPath);
-            loadingStatus.innerText = "Connecting to data source...";
-            
-            fetch(dataPath)
-                .then(response => {
-                    console.log("Response received:", response.status, response.statusText);
-                    if (!response.ok) {
-                        throw new Error(`File not found (HTTP ${response.status}). Check if ${dataPath} exists in the repo.`);
+            // Fetch Data
+            useEffect(() => {
+                const dataPath = 'filtered_conflict_data.csv';
+                Papa.parse(dataPath, {
+                    download: true,
+                    header: true,
+                    skipEmptyLines: true,
+                    complete: (results) => {
+                        // Filter out non-target regions if any remained
+                        const cleaned = results.data.filter(d => 
+                            d.latitude && d.longitude && 
+                            (d.Analysis_Region === 'North West' || d.Analysis_Region === 'North East')
+                        );
+                        setData(cleaned);
+                        setLoading(false);
+                    },
+                    error: (err) => {
+                        console.error(err);
+                        setError("Failed to load data. Please check if the CSV file exists.");
+                        setLoading(false);
                     }
-                    loadingStatus.innerText = "Downloading data (3.5MB)...";
-                    return response.text();
-                })
-                .then(csvText => {
-                    console.log("Data downloaded, parsing...");
-                    loadingStatus.innerText = "Parsing data...";
+                });
+            }, []);
+
+            // Theme toggle
+            useEffect(() => {
+                document.body.className = isDark ? 'dark' : 'light';
+            }, [isDark]);
+
+            // Filtered Data
+            const filteredData = useMemo(() => {
+                return data.filter(d => {
+                    const matchType = filters.type === 'all' || d.official_conflict_type === filters.type;
+                    const matchState = filters.state === 'all' || d.adm_1.toLowerCase().includes(filters.state.toLowerCase());
+                    const year = parseInt(d.year);
+                    const matchYear = year >= filters.minYear && year <= filters.maxYear;
+                    const matchFatal = (parseInt(d.best) || 0) >= filters.minFatalities;
                     
-                    Papa.parse(csvText, {
-                        header: true,
-                        skipEmptyLines: true,
-                        complete: function(results) {
-                            allData = results.data;
-                            loadingStatus.style.display = 'none';
-                            console.log(`Success! Loaded ${allData.length} rows.`);
-                            applyFilters();
-                        },
-                        error: function(err) {
-                            console.error("Parse error:", err);
-                            loadingStatus.innerHTML = `<span style="color:red">Parse Error: ${err.message}</span>`;
-                        }
-                    });
-                })
-                .catch(err => {
-                    console.error("Fetch/Data error:", err);
-                    loadingStatus.innerHTML = `<span style="color:red">${err.message}</span>`;
+                    return matchType && matchState && matchYear && matchFatal;
+                });
+            }, [data, filters]);
+
+            // Chart Data
+            const chartData = useMemo(() => {
+                const yearCounts = {};
+                filteredData.forEach(d => {
+                    const y = d.year;
+                    if (y) yearCounts[y] = (yearCounts[y] || 0) + 1;
+                });
+                return Object.keys(yearCounts)
+                    .sort()
+                    .map(year => ({ year, events: yearCounts[year] }));
+            }, [filteredData]);
+
+            // Regional Counts
+            const counts = useMemo(() => {
+                const nw = filteredData.filter(d => d.Analysis_Region === 'North West').length;
+                const ne = filteredData.filter(d => d.Analysis_Region === 'North East').length;
+                return { nw, ne };
+            }, [filteredData]);
+
+            if (loading) return (
+                <div className="loading-overlay">
+                    <div className="spinner"></div>
+                    <p>Initializing Conflict Dashboard...</p>
+                </div>
+            );
+
+            if (error) return (
+                <div className="loading-overlay">
+                    <div style={{color: '#ef4444', textAlign: 'center'}}>
+                        <h2>Error</h2>
+                        <p>{error}</p>
+                    </div>
+                </div>
+            );
+
+            return (
+                <React.Fragment>
+                    <div className="sidebar">
+                        <div className="header">
+                            <h1>Nigeria Conflict Map</h1>
+                            <p>Interactive instrument for North West & North East regional analysis (2000-Present).</p>
+                        </div>
+
+                        <div className="controls">
+                            <button className="btn" onClick={() => setIsDark(!isDark)}>
+                                {isDark ? '☀️' : '🌙'} {isDark ? 'Light' : 'Dark'}
+                            </button>
+                            <button className="btn btn-primary" onClick={() => window.open('https://github.com/dicocorobe/ICT4DNigeria', '_blank')}>
+                                📁 Repo
+                            </button>
+                        </div>
+
+                        <div className="stats-grid">
+                            <StatCard label="North West" value={counts.nw} type="nw" />
+                            <StatCard label="North East" value={counts.ne} type="ne" />
+                        </div>
+
+                        <div className="filter-section">
+                            <div className="filter-group">
+                                <label>Conflict Type</label>
+                                <select value={filters.type} onChange={e => setFilters({...filters, type: e.target.value})}>
+                                    <option value="all">All Types</option>
+                                    {CONFLICT_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
+                                </select>
+                            </div>
+
+                            <div className="filter-group">
+                                <label>State (13 Regions)</label>
+                                <select value={filters.state} onChange={e => setFilters({...filters, state: e.target.value})}>
+                                    <option value="all">All States</option>
+                                    <optgroup label="North West">
+                                        {REGIONS['North West'].map(s => <option key={s} value={s}>{s}</option>)}
+                                    </optgroup>
+                                    <optgroup label="North East">
+                                        {REGIONS['North East'].map(s => <option key={s} value={s}>{s}</option>)}
+                                    </optgroup>
+                                </select>
+                            </div>
+
+                            <div className="filter-group">
+                                <label>Minimum Fatalities</label>
+                                <select value={filters.minFatalities} onChange={e => setFilters({...filters, minFatalities: parseInt(e.target.value)})}>
+                                    <option value="0">Show All</option>
+                                    <option value="1">1+ Deaths</option>
+                                    <option value="10">10+ Deaths</option>
+                                    <option value="50">50+ Deaths</option>
+                                    <option value="100">100+ Deaths</option>
+                                </select>
+                            </div>
+
+                            <div className="filter-group">
+                                <div className="year-display">
+                                    <span>From: {filters.minYear}</span>
+                                    <span>To: 2026</span>
+                                </div>
+                                <input 
+                                    type="range" 
+                                    min="2000" 
+                                    max="2024" 
+                                    value={filters.minYear} 
+                                    onChange={e => setFilters({...filters, minYear: parseInt(e.target.value)})}
+                                />
+                            </div>
+                        </div>
+
+                        <div className="chart-container">
+                            <div className="chart-title">Annual Conflict Events</div>
+                            <div style={{ width: '100%', height: 150 }}>
+                                <ResponsiveContainer>
+                                    <BarChart data={chartData}>
+                                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={isDark ? '#334155' : '#e2e8f0'} />
+                                        <XAxis dataKey="year" fontSize={10} tick={{fill: isDark ? '#94a3b8' : '#64748b'}} />
+                                        <Tooltip 
+                                            contentStyle={{ backgroundColor: isDark ? '#1e293b' : '#fff', borderColor: isDark ? '#334155' : '#e2e8f0' }}
+                                            itemStyle={{ color: var('--primary') }}
+                                        />
+                                        <Bar dataKey="events" fill="var(--primary)" radius={[4, 4, 0, 0]} />
+                                    </BarChart>
+                                </ResponsiveContainer>
+                            </div>
+                        </div>
+                    </div>
+
+                    <MapContainer points={filteredData} isDark={isDark} />
+                </React.Fragment>
+            );
+        };
+
+        const MapContainer = ({ points, isDark }) => {
+            const mapRef = useRef(null);
+            const markerLayerRef = useRef(null);
+            
+            // Initialization
+            useEffect(() => {
+                mapRef.current = L.map('map', {
+                    center: [11.5, 10.0],
+                    zoom: 6,
+                    zoomControl: false
                 });
 
-            // Event Listeners
-            document.getElementById('typeFilter').addEventListener('change', applyFilters);
-            document.getElementById('stateFilter').addEventListener('change', applyFilters);
-            document.getElementById('yearFilter').addEventListener('input', applyFilters);
-            document.getElementById('fatalFilter').addEventListener('change', applyFilters);
+                L.control.zoom({ position: 'topright' }).addTo(mapRef.current);
+                markerLayerRef.current = L.layerGroup().addTo(mapRef.current);
 
-            document.getElementById('themeToggle').addEventListener('click', () => {
-                const body = document.body;
-                if (currentMode === 'light') {
-                    body.classList.replace('light-mode', 'dark-mode');
-                    map.removeLayer(lightTiles);
-                    darkTiles.addTo(map);
-                    document.getElementById('themeToggle').innerText = 'Switch to Day Mode';
-                    currentMode = 'dark';
-                } else {
-                    body.classList.replace('dark-mode', 'light-mode');
-                    map.removeLayer(darkTiles);
-                    lightTiles.addTo(map);
-                    document.getElementById('themeToggle').innerText = 'Switch to Night Mode';
-                    currentMode = 'light';
-                }
-            });
-        });
+                return () => mapRef.current.remove();
+            }, []);
+
+            // Tiles Update
+            useEffect(() => {
+                const tileUrl = isDark 
+                    ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
+                    : 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png';
+                
+                const tiles = L.tileLayer(tileUrl, {
+                    attribution: '&copy; CARTO'
+                });
+
+                tiles.addTo(mapRef.current);
+                return () => mapRef.current.removeLayer(tiles);
+            }, [isDark]);
+
+            // Markers Update
+            useEffect(() => {
+                if (!markerLayerRef.current) return;
+                
+                markerLayerRef.current.clearLayers();
+                
+                points.forEach(p => {
+                    const lat = parseFloat(p.latitude);
+                    const lon = parseFloat(p.longitude);
+                    if (!isNaN(lat) && !isNaN(lon)) {
+                        L.circleMarker([lat, lon], {
+                            radius: 6,
+                            fillColor: getIntensityColor(p.best),
+                            color: isDark ? "#fff" : "#000",
+                            weight: 0.5,
+                            opacity: 1,
+                            fillOpacity: 0.8
+                        })
+                        .bindPopup(`
+                            <div style="font-family: 'Inter', sans-serif;">
+                                <strong style="color: var(--primary)">${p.conflict_name || 'Conflict Event'}</strong><br/>
+                                <div style="margin-top: 8px; font-size: 12px; line-height: 1.5;">
+                                    <b>Location:</b> ${p.adm_1}, ${p.adm_2}<br/>
+                                    <b>Type:</b> ${p.official_conflict_type}<br/>
+                                    <b>Date:</b> ${p.date_start ? p.date_start.split(' ')[0] : 'N/A'}<br/>
+                                    <b>Fatalities:</b> <span style="color: ${getIntensityColor(p.best)}">${p.best || 0}</span>
+                                </div>
+                            </div>
+                        `)
+                        .addTo(markerLayerRef.current);
+                    }
+                });
+            }, [points, isDark]);
+
+            return (
+                <div id="map">
+                    <div style={{ position: 'absolute', bottom: 20, right: 20, zIndex: 1000 }}>
+                        <div className="legend">
+                            <strong>Fatality Intensity</strong>
+                            <div className="legend-item"><div className="dot" style={{backgroundColor: INTENSITY_COLORS.low}}></div> 0 - 10 Deaths</div>
+                            <div className="legend-item"><div className="dot" style={{backgroundColor: INTENSITY_COLORS.medium}}></div> 11 - 50 Deaths</div>
+                            <div className="legend-item"><div className="dot" style={{backgroundColor: INTENSITY_COLORS.high}}></div> 51 - 100 Deaths</div>
+                            <div className="legend-item"><div className="dot" style={{backgroundColor: INTENSITY_COLORS.extreme}}></div> 100+ Deaths</div>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
     </script>
 </body>
 </html>
