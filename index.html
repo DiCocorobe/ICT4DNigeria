@@ -6,7 +6,9 @@
     <title>Nigeria Conflict Analysis Dashboard</title>
     
     <!-- CSS Dependencies -->
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin=""/>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.Default.css" />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     
     <style>
@@ -54,6 +56,14 @@
         .btn { flex: 1; padding: 10px; border-radius: 8px; border: 1px solid var(--border); background: var(--panel); color: var(--text); font-size: 0.875rem; font-weight: 600; cursor: pointer; }
         .btn-primary { background: var(--primary); color: white; border: none; }
 
+        /* Marker Cluster Custom Styling */
+        .marker-cluster-small { background-color: rgba(181, 226, 140, 0.6); }
+        .marker-cluster-small div { background-color: rgba(110, 204, 57, 0.6); }
+        .marker-cluster-medium { background-color: rgba(241, 211, 87, 0.6); }
+        .marker-cluster-medium div { background-color: rgba(240, 194, 12, 0.6); }
+        .marker-cluster-large { background-color: rgba(253, 156, 115, 0.6); }
+        .marker-cluster-large div { background-color: rgba(241, 128, 23, 0.6); }
+
         #error-console {
             position: fixed; bottom: 0; left: 0; right: 0;
             background: rgba(239, 68, 68, 0.95); color: white; padding: 15px;
@@ -96,6 +106,7 @@
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script crossorigin src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     <script crossorigin src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script crossorigin src="https://unpkg.com/leaflet.markercluster@1.4.1/dist/leaflet.markercluster.js"></script>
     <script crossorigin src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
 
     <script>
@@ -175,13 +186,23 @@
 
         const MapContainer = ({ points, isDark }) => {
             const mapRef = useRef(null);
-            const markerLayerRef = useRef(null);
+            const clusterGroupRef = useRef(null);
             
             useEffect(() => {
                 if (!mapRef.current) {
                     mapRef.current = L.map('map', { center: [11.5, 10.0], zoom: 6, zoomControl: false });
                     L.control.zoom({ position: 'topright' }).addTo(mapRef.current);
-                    markerLayerRef.current = L.layerGroup().addTo(mapRef.current);
+                    
+                    // Initialize Marker Cluster Group
+                    clusterGroupRef.current = L.markerClusterGroup({
+                        showCoverageOnHover: true, // Shows polygon on hover
+                        zoomToBoundsOnClick: true,
+                        spiderfyOnMaxZoom: true,
+                        chunkedLoading: true,
+                        maxClusterRadius: 50 // Balance between merging and detail
+                    });
+                    
+                    mapRef.current.addLayer(clusterGroupRef.current);
                 }
             }, []);
 
@@ -194,15 +215,16 @@
             }, [isDark]);
 
             useEffect(() => {
-                if (markerLayerRef.current) {
-                    markerLayerRef.current.clearLayers();
-                    points.forEach(p => {
+                if (clusterGroupRef.current) {
+                    clusterGroupRef.current.clearLayers();
+                    
+                    const markers = points.map(p => {
                         const lat = parseFloat(p.latitude), lon = parseFloat(p.longitude);
                         if (!isNaN(lat) && !isNaN(lon)) {
                             const d = parseInt(p.best) || 0;
                             const color = d > 100 ? '#7f1d1d' : d > 50 ? '#ef4444' : d > 10 ? '#f97316' : '#fbbf24';
                             
-                            L.circleMarker([lat, lon], {
+                            const marker = L.circleMarker([lat, lon], {
                                 radius: 6, fillColor: color, color: isDark ? "#fff" : "#000",
                                 weight: 0.5, opacity: 1, fillOpacity: 0.8
                             })
@@ -210,12 +232,16 @@
                                 <div style="font-family: sans-serif;">
                                     <strong style="color: #2563eb">${p.conflict_name || 'Event'}</strong><br/>
                                     <b>Location:</b> ${p.adm_1}, ${p.adm_2}<br/>
+                                    <b>Date:</b> ${p.date_start ? p.date_start.split(' ')[0] : 'N/A'}<br/>
                                     <b>Fatalities:</b> ${p.best || 0}
                                 </div>
-                            `)
-                            .addTo(markerLayerRef.current);
+                            `);
+                            return marker;
                         }
-                    });
+                        return null;
+                    }).filter(m => m !== null);
+                    
+                    clusterGroupRef.current.addLayers(markers);
                 }
             }, [points, isDark]);
 
@@ -268,7 +294,7 @@
                     <div className="sidebar">
                         <div className="header">
                             <h1>Conflict Dashboard</h1>
-                            <p>Analysis of Northern Nigeria (2000-2024)</p>
+                            <p>North West & North East analysis (2000-2024)</p>
                         </div>
                         <div className="controls">
                             <button className="btn" onClick={() => setIsDark(!isDark)}>{isDark ? '☀️ Light' : '🌙 Dark'}</button>
@@ -300,8 +326,7 @@
             );
         };
 
-        const root = ReactDOM.createRoot(document.getElementById('root'));
-        root.render(<App />);
+        ReactDOM.createRoot(document.getElementById('root')).render(<App />);
     </script>
 </body>
 </html>
