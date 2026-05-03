@@ -269,6 +269,18 @@
         @keyframes spin {
             to { transform: rotate(360deg); }
         }
+
+        /* Fallback */
+        #root:empty::before {
+            content: "Loading Dashboard... If this persists, please check your internet connection or console for errors.";
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            width: 100vw;
+            color: #64748b;
+            font-size: 1.1rem;
+        }
     </style>
 </head>
 <body class="light">
@@ -283,10 +295,11 @@
     <script src="https://unpkg.com/recharts/umd/Recharts.js"></script>
 
     <script type="text/babel">
-        const { useState, useEffect, useMemo, useRef } = React;
+        // Access components from window for CDN stability
+        const { useState, useEffect, useMemo, useRef } = window.React;
         const { 
-            LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar
-        } = Recharts;
+            BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer
+        } = window.Recharts;
 
         // --- Constants ---
         const REGIONS = {
@@ -342,12 +355,11 @@
             // Fetch Data
             useEffect(() => {
                 const dataPath = 'filtered_conflict_data.csv';
-                Papa.parse(dataPath, {
+                window.Papa.parse(dataPath, {
                     download: true,
                     header: true,
                     skipEmptyLines: true,
                     complete: (results) => {
-                        // Filter out non-target regions if any remained
                         const cleaned = results.data.filter(d => 
                             d.latitude && d.longitude && 
                             (d.Analysis_Region === 'North West' || d.Analysis_Region === 'North East')
@@ -495,9 +507,9 @@
                                         <XAxis dataKey="year" fontSize={10} tick={{fill: isDark ? '#94a3b8' : '#64748b'}} />
                                         <Tooltip 
                                             contentStyle={{ backgroundColor: isDark ? '#1e293b' : '#fff', borderColor: isDark ? '#334155' : '#e2e8f0' }}
-                                            itemStyle={{ color: var('--primary') }}
+                                            itemStyle={{ color: '#2563eb' }}
                                         />
-                                        <Bar dataKey="events" fill="var(--primary)" radius={[4, 4, 0, 0]} />
+                                        <Bar dataKey="events" fill="#2563eb" radius={[4, 4, 0, 0]} />
                                     </BarChart>
                                 </ResponsiveContainer>
                             </div>
@@ -515,14 +527,14 @@
             
             // Initialization
             useEffect(() => {
-                mapRef.current = L.map('map', {
+                mapRef.current = window.L.map('map', {
                     center: [11.5, 10.0],
                     zoom: 6,
                     zoomControl: false
                 });
 
-                L.control.zoom({ position: 'topright' }).addTo(mapRef.current);
-                markerLayerRef.current = L.layerGroup().addTo(mapRef.current);
+                window.L.control.zoom({ position: 'topright' }).addTo(mapRef.current);
+                markerLayerRef.current = window.L.layerGroup().addTo(mapRef.current);
 
                 return () => mapRef.current.remove();
             }, []);
@@ -533,12 +545,14 @@
                     ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
                     : 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png';
                 
-                const tiles = L.tileLayer(tileUrl, {
+                const tiles = window.L.tileLayer(tileUrl, {
                     attribution: '&copy; CARTO'
                 });
 
                 tiles.addTo(mapRef.current);
-                return () => mapRef.current.removeLayer(tiles);
+                return () => {
+                    if (mapRef.current) mapRef.current.removeLayer(tiles);
+                };
             }, [isDark]);
 
             // Markers Update
@@ -551,7 +565,7 @@
                     const lat = parseFloat(p.latitude);
                     const lon = parseFloat(p.longitude);
                     if (!isNaN(lat) && !isNaN(lon)) {
-                        L.circleMarker([lat, lon], {
+                        window.L.circleMarker([lat, lon], {
                             radius: 6,
                             fillColor: getIntensityColor(p.best),
                             color: isDark ? "#fff" : "#000",
@@ -561,7 +575,7 @@
                         })
                         .bindPopup(`
                             <div style="font-family: 'Inter', sans-serif;">
-                                <strong style="color: var(--primary)">${p.conflict_name || 'Conflict Event'}</strong><br/>
+                                <strong style="color: #2563eb">${p.conflict_name || 'Conflict Event'}</strong><br/>
                                 <div style="margin-top: 8px; font-size: 12px; line-height: 1.5;">
                                     <b>Location:</b> ${p.adm_1}, ${p.adm_2}<br/>
                                     <b>Type:</b> ${p.official_conflict_type}<br/>
@@ -590,7 +604,7 @@
             );
         };
 
-        const root = ReactDOM.createRoot(document.getElementById('root'));
+        const root = window.ReactDOM.createRoot(document.getElementById('root'));
         root.render(<App />);
     </script>
 </body>
