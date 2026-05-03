@@ -6,20 +6,18 @@
     <title>Nigeria Conflict Analysis Dashboard</title>
     
     <!-- CSS Dependencies -->
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     
     <style>
         :root {
             --primary: #2563eb;
-            --primary-hover: #1d4ed8;
             --bg: #f8fafc;
             --text: #0f172a;
             --panel: #ffffff;
             --border: #e2e8f0;
             --nw: #10b981;
             --ne: #ef4444;
-            --shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
         }
 
         .dark {
@@ -27,585 +25,244 @@
             --text: #f8fafc;
             --panel: #1e293b;
             --border: #334155;
-            --shadow: 0 4px 6px -1px rgb(0 0 0 / 0.2);
         }
 
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: 'Inter', sans-serif; background-color: var(--bg); color: var(--text); height: 100vh; overflow: hidden; transition: 0.3s; }
+        #root { display: flex; height: 100vh; width: 100vw; }
 
-        body {
-            font-family: 'Inter', sans-serif;
-            background-color: var(--bg);
-            color: var(--text);
-            height: 100vh;
-            overflow: hidden;
-            transition: background-color 0.3s, color 0.3s;
-        }
+        .sidebar { width: 400px; background: var(--panel); border-right: 1px solid var(--border); display: flex; flex-direction: column; padding: 24px; overflow-y: auto; z-index: 1000; }
+        .header { margin-bottom: 24px; }
+        .header h1 { font-size: 1.5rem; color: var(--primary); margin-bottom: 8px; }
+        .header p { font-size: 0.875rem; opacity: 0.7; }
 
-        #root {
-            display: flex;
-            height: 100vh;
-            width: 100vw;
-        }
-
-        /* Sidebar */
-        .sidebar {
-            width: 400px;
-            background-color: var(--panel);
-            border-right: 1px solid var(--border);
-            display: flex;
-            flex-direction: column;
-            padding: 24px;
-            overflow-y: auto;
-            z-index: 1000;
-            box-shadow: var(--shadow);
-        }
-
-        .header {
-            margin-bottom: 24px;
-        }
-
-        .header h1 {
-            font-size: 1.5rem;
-            font-weight: 700;
-            margin-bottom: 8px;
-            color: var(--primary);
-        }
-
-        .header p {
-            font-size: 0.875rem;
-            opacity: 0.7;
-            line-height: 1.5;
-        }
-
-        /* Stats Cards */
-        .stats-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 12px;
-            margin-bottom: 24px;
-        }
-
-        .stat-card {
-            padding: 16px;
-            border-radius: 12px;
-            border: 1px solid var(--border);
-            background-color: var(--bg);
-        }
-
+        .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 24px; }
+        .stat-card { padding: 16px; border-radius: 12px; border: 1px solid var(--border); background: var(--bg); }
         .stat-card.nw { border-left: 4px solid var(--nw); }
         .stat-card.ne { border-left: 4px solid var(--ne); }
+        .stat-label { font-size: 0.75rem; font-weight: 600; opacity: 0.6; margin-bottom: 4px; }
+        .stat-value { font-size: 1.25rem; font-weight: 700; }
 
-        .stat-label {
-            font-size: 0.75rem;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-            opacity: 0.6;
-            margin-bottom: 4px;
-        }
+        .filter-section { display: flex; flex-direction: column; gap: 16px; margin-bottom: 24px; }
+        .filter-group { display: flex; flex-direction: column; gap: 6px; }
+        .filter-group label { font-size: 0.875rem; font-weight: 600; }
+        select, input[type="range"] { width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--border); background: var(--panel); color: var(--text); font-size: 0.875rem; }
 
-        .stat-value {
-            font-size: 1.25rem;
-            font-weight: 700;
-        }
+        #map { flex-grow: 1; height: 100%; background: #aad3df; }
+        
+        .controls { display: flex; gap: 8px; margin-bottom: 24px; }
+        .btn { flex: 1; padding: 10px; border-radius: 8px; border: 1px solid var(--border); background: var(--panel); color: var(--text); font-size: 0.875rem; font-weight: 600; cursor: pointer; }
+        .btn-primary { background: var(--primary); color: white; border: none; }
 
-        /* Filters */
-        .filter-section {
-            display: flex;
-            flex-direction: column;
-            gap: 16px;
-            margin-bottom: 24px;
-        }
-
-        .filter-group {
-            display: flex;
-            flex-direction: column;
-            gap: 6px;
-        }
-
-        .filter-group label {
-            font-size: 0.875rem;
-            font-weight: 600;
-        }
-
-        select, input[type="range"] {
-            width: 100%;
-            padding: 10px;
-            border-radius: 8px;
-            border: 1px solid var(--border);
-            background-color: var(--panel);
-            color: var(--text);
-            font-family: inherit;
-            font-size: 0.875rem;
-        }
-
-        .year-display {
-            display: flex;
-            justify-content: space-between;
-            font-size: 0.75rem;
-            font-weight: 500;
-            opacity: 0.7;
-        }
-
-        /* Chart */
-        .chart-container {
-            margin-top: auto;
-            padding-top: 24px;
-            border-top: 1px solid var(--border);
-        }
-
-        .chart-title {
-            font-size: 0.875rem;
-            font-weight: 600;
-            margin-bottom: 12px;
-        }
-
-        /* Map */
-        #map {
-            flex-grow: 1;
-            height: 100%;
-            background-color: #aad3df;
-        }
-
-        /* Legend */
-        .legend {
-            background: var(--panel);
-            padding: 12px;
-            border-radius: 8px;
-            border: 1px solid var(--border);
-            box-shadow: var(--shadow);
-            font-size: 0.75rem;
-            line-height: 1.6;
-        }
-
-        .legend-item {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        .dot {
-            width: 10px;
-            height: 10px;
-            border-radius: 50%;
-        }
-
-        /* Controls */
-        .controls {
-            display: flex;
-            gap: 8px;
-            margin-bottom: 24px;
-        }
-
-        .btn {
-            flex: 1;
-            padding: 10px;
-            border-radius: 8px;
-            border: 1px solid var(--border);
-            background-color: var(--panel);
-            color: var(--text);
-            font-size: 0.875rem;
-            font-weight: 600;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 8px;
-            transition: all 0.2s;
-        }
-
-        .btn:hover {
-            background-color: var(--border);
-        }
-
-        .btn-primary {
-            background-color: var(--primary);
+        #error-console {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: rgba(239, 68, 68, 0.9);
             color: white;
-            border: none;
+            padding: 10px;
+            font-family: monospace;
+            font-size: 12px;
+            z-index: 10000;
+            display: none;
+            max-height: 100px;
+            overflow-y: auto;
         }
 
-        .btn-primary:hover {
-            background-color: var(--primary-hover);
+        .loading-screen {
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+            background: var(--bg); display: flex; flex-direction: column;
+            align-items: center; justify-content: center; z-index: 9999;
         }
-
-        /* Mobile */
+        
         @media (max-width: 768px) {
             #root { flex-direction: column; }
             .sidebar { width: 100%; height: 50vh; }
             #map { height: 50vh; }
         }
-
-        /* Loading Overlay */
-        .loading-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(0,0,0,0.7);
-            color: white;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            z-index: 9999;
-            backdrop-filter: blur(4px);
-        }
-
-        .spinner {
-            width: 40px;
-            height: 40px;
-            border: 4px solid rgba(255,255,255,0.3);
-            border-radius: 50%;
-            border-top-color: white;
-            animation: spin 1s linear infinite;
-            margin-bottom: 16px;
-        }
-
-        @keyframes spin {
-            to { transform: rotate(360deg); }
-        }
-
-        /* Fallback */
-        #root:empty::before {
-            content: "Loading Dashboard... If this persists, please check your internet connection or console for errors.";
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            height: 100vh;
-            width: 100vw;
-            color: #64748b;
-            font-size: 1.1rem;
-        }
     </style>
 </head>
 <body class="light">
+    <div id="error-console"></div>
+    <div id="loading-screen" class="loading-screen">
+        <div style="font-weight: 600; margin-bottom: 10px;">Loading Dashboard Components...</div>
+        <div id="loading-status" style="font-size: 0.8rem; opacity: 0.7;">Initializing React & Libraries</div>
+    </div>
+    
     <div id="root"></div>
 
     <!-- JS Dependencies -->
+    <script>
+        window.onerror = function(msg, url, line) {
+            const console = document.getElementById('error-console');
+            console.style.display = 'block';
+            console.innerHTML += `<div>Error: ${msg} at ${line}</div>`;
+        };
+    </script>
+    
     <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""></script>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
     <script src="https://unpkg.com/recharts/umd/Recharts.js"></script>
 
     <script type="text/babel">
-        // Access components from window for CDN stability
-        const { useState, useEffect, useMemo, useRef } = window.React;
-        const { 
-            BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer
-        } = window.Recharts;
+        const { useState, useEffect, useMemo, useRef } = React;
+        const { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } = Recharts;
 
-        // --- Constants ---
         const REGIONS = {
             'North West': ['Sokoto', 'Kebbi', 'Zamfara', 'Katsina', 'Kano', 'Jigawa', 'Kaduna'],
             'North East': ['Yobe', 'Borno', 'Bauchi', 'Gombe', 'Adamawa', 'Taraba']
         };
 
-        const CONFLICT_TYPES = [
-            'State-based conflict',
-            'Non-state conflict',
-            'One-sided violence'
-        ];
-
-        const INTENSITY_COLORS = {
-            'low': '#fbbf24',    // 0-10
-            'medium': '#f97316', // 11-50
-            'high': '#ef4444',   // 51-100
-            'extreme': '#7f1d1d' // 100+
-        };
-
-        // --- Helpers ---
         const getIntensityColor = (deaths) => {
             const d = parseInt(deaths) || 0;
-            if (d > 100) return INTENSITY_COLORS.extreme;
-            if (d > 50) return INTENSITY_COLORS.high;
-            if (d > 10) return INTENSITY_COLORS.medium;
-            return INTENSITY_COLORS.low;
-        };
-
-        // --- Components ---
-
-        const StatCard = ({ label, value, type }) => (
-            <div className={`stat-card ${type}`}>
-                <div className="stat-label">{label}</div>
-                <div className="stat-value">{value.toLocaleString()}</div>
-            </div>
-        );
-
-        const App = () => {
-            const [data, setData] = useState([]);
-            const [loading, setLoading] = useState(true);
-            const [error, setError] = useState(null);
-            const [isDark, setIsDark] = useState(false);
-            
-            const [filters, setFilters] = useState({
-                type: 'all',
-                state: 'all',
-                minYear: 2000,
-                maxYear: 2026,
-                minFatalities: 0
-            });
-
-            // Fetch Data
-            useEffect(() => {
-                const dataPath = 'filtered_conflict_data.csv';
-                window.Papa.parse(dataPath, {
-                    download: true,
-                    header: true,
-                    skipEmptyLines: true,
-                    complete: (results) => {
-                        const cleaned = results.data.filter(d => 
-                            d.latitude && d.longitude && 
-                            (d.Analysis_Region === 'North West' || d.Analysis_Region === 'North East')
-                        );
-                        setData(cleaned);
-                        setLoading(false);
-                    },
-                    error: (err) => {
-                        console.error(err);
-                        setError("Failed to load data. Please check if the CSV file exists.");
-                        setLoading(false);
-                    }
-                });
-            }, []);
-
-            // Theme toggle
-            useEffect(() => {
-                document.body.className = isDark ? 'dark' : 'light';
-            }, [isDark]);
-
-            // Filtered Data
-            const filteredData = useMemo(() => {
-                return data.filter(d => {
-                    const matchType = filters.type === 'all' || d.official_conflict_type === filters.type;
-                    const matchState = filters.state === 'all' || d.adm_1.toLowerCase().includes(filters.state.toLowerCase());
-                    const year = parseInt(d.year);
-                    const matchYear = year >= filters.minYear && year <= filters.maxYear;
-                    const matchFatal = (parseInt(d.best) || 0) >= filters.minFatalities;
-                    
-                    return matchType && matchState && matchYear && matchFatal;
-                });
-            }, [data, filters]);
-
-            // Chart Data
-            const chartData = useMemo(() => {
-                const yearCounts = {};
-                filteredData.forEach(d => {
-                    const y = d.year;
-                    if (y) yearCounts[y] = (yearCounts[y] || 0) + 1;
-                });
-                return Object.keys(yearCounts)
-                    .sort()
-                    .map(year => ({ year, events: yearCounts[year] }));
-            }, [filteredData]);
-
-            // Regional Counts
-            const counts = useMemo(() => {
-                const nw = filteredData.filter(d => d.Analysis_Region === 'North West').length;
-                const ne = filteredData.filter(d => d.Analysis_Region === 'North East').length;
-                return { nw, ne };
-            }, [filteredData]);
-
-            if (loading) return (
-                <div className="loading-overlay">
-                    <div className="spinner"></div>
-                    <p>Initializing Conflict Dashboard...</p>
-                </div>
-            );
-
-            if (error) return (
-                <div className="loading-overlay">
-                    <div style={{color: '#ef4444', textAlign: 'center'}}>
-                        <h2>Error</h2>
-                        <p>{error}</p>
-                    </div>
-                </div>
-            );
-
-            return (
-                <React.Fragment>
-                    <div className="sidebar">
-                        <div className="header">
-                            <h1>Nigeria Conflict Map</h1>
-                            <p>Interactive instrument for North West & North East regional analysis (2000-Present).</p>
-                        </div>
-
-                        <div className="controls">
-                            <button className="btn" onClick={() => setIsDark(!isDark)}>
-                                {isDark ? '☀️' : '🌙'} {isDark ? 'Light' : 'Dark'}
-                            </button>
-                            <button className="btn btn-primary" onClick={() => window.open('https://github.com/dicocorobe/ICT4DNigeria', '_blank')}>
-                                📁 Repo
-                            </button>
-                        </div>
-
-                        <div className="stats-grid">
-                            <StatCard label="North West" value={counts.nw} type="nw" />
-                            <StatCard label="North East" value={counts.ne} type="ne" />
-                        </div>
-
-                        <div className="filter-section">
-                            <div className="filter-group">
-                                <label>Conflict Type</label>
-                                <select value={filters.type} onChange={e => setFilters({...filters, type: e.target.value})}>
-                                    <option value="all">All Types</option>
-                                    {CONFLICT_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
-                                </select>
-                            </div>
-
-                            <div className="filter-group">
-                                <label>State (13 Regions)</label>
-                                <select value={filters.state} onChange={e => setFilters({...filters, state: e.target.value})}>
-                                    <option value="all">All States</option>
-                                    <optgroup label="North West">
-                                        {REGIONS['North West'].map(s => <option key={s} value={s}>{s}</option>)}
-                                    </optgroup>
-                                    <optgroup label="North East">
-                                        {REGIONS['North East'].map(s => <option key={s} value={s}>{s}</option>)}
-                                    </optgroup>
-                                </select>
-                            </div>
-
-                            <div className="filter-group">
-                                <label>Minimum Fatalities</label>
-                                <select value={filters.minFatalities} onChange={e => setFilters({...filters, minFatalities: parseInt(e.target.value)})}>
-                                    <option value="0">Show All</option>
-                                    <option value="1">1+ Deaths</option>
-                                    <option value="10">10+ Deaths</option>
-                                    <option value="50">50+ Deaths</option>
-                                    <option value="100">100+ Deaths</option>
-                                </select>
-                            </div>
-
-                            <div className="filter-group">
-                                <div className="year-display">
-                                    <span>From: {filters.minYear}</span>
-                                    <span>To: 2026</span>
-                                </div>
-                                <input 
-                                    type="range" 
-                                    min="2000" 
-                                    max="2024" 
-                                    value={filters.minYear} 
-                                    onChange={e => setFilters({...filters, minYear: parseInt(e.target.value)})}
-                                />
-                            </div>
-                        </div>
-
-                        <div className="chart-container">
-                            <div className="chart-title">Annual Conflict Events</div>
-                            <div style={{ width: '100%', height: 150 }}>
-                                <ResponsiveContainer>
-                                    <BarChart data={chartData}>
-                                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={isDark ? '#334155' : '#e2e8f0'} />
-                                        <XAxis dataKey="year" fontSize={10} tick={{fill: isDark ? '#94a3b8' : '#64748b'}} />
-                                        <Tooltip 
-                                            contentStyle={{ backgroundColor: isDark ? '#1e293b' : '#fff', borderColor: isDark ? '#334155' : '#e2e8f0' }}
-                                            itemStyle={{ color: '#2563eb' }}
-                                        />
-                                        <Bar dataKey="events" fill="#2563eb" radius={[4, 4, 0, 0]} />
-                                    </BarChart>
-                                </ResponsiveContainer>
-                            </div>
-                        </div>
-                    </div>
-
-                    <MapContainer points={filteredData} isDark={isDark} />
-                </React.Fragment>
-            );
+            if (d > 100) return '#7f1d1d';
+            if (d > 50) return '#ef4444';
+            if (d > 10) return '#f97316';
+            return '#fbbf24';
         };
 
         const MapContainer = ({ points, isDark }) => {
             const mapRef = useRef(null);
             const markerLayerRef = useRef(null);
             
-            // Initialization
             useEffect(() => {
-                mapRef.current = window.L.map('map', {
-                    center: [11.5, 10.0],
-                    zoom: 6,
-                    zoomControl: false
-                });
-
-                window.L.control.zoom({ position: 'topright' }).addTo(mapRef.current);
-                markerLayerRef.current = window.L.layerGroup().addTo(mapRef.current);
-
-                return () => mapRef.current.remove();
+                if (!mapRef.current) {
+                    mapRef.current = L.map('map', { center: [11.5, 10.0], zoom: 6, zoomControl: false });
+                    L.control.zoom({ position: 'topright' }).addTo(mapRef.current);
+                    markerLayerRef.current = L.layerGroup().addTo(mapRef.current);
+                }
             }, []);
 
-            // Tiles Update
             useEffect(() => {
                 const tileUrl = isDark 
                     ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
                     : 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png';
-                
-                const tiles = window.L.tileLayer(tileUrl, {
-                    attribution: '&copy; CARTO'
-                });
-
-                tiles.addTo(mapRef.current);
-                return () => {
-                    if (mapRef.current) mapRef.current.removeLayer(tiles);
-                };
+                const tiles = L.tileLayer(tileUrl, { attribution: '&copy; CARTO' }).addTo(mapRef.current);
+                return () => mapRef.current.removeLayer(tiles);
             }, [isDark]);
 
-            // Markers Update
             useEffect(() => {
-                if (!markerLayerRef.current) return;
-                
-                markerLayerRef.current.clearLayers();
-                
-                points.forEach(p => {
-                    const lat = parseFloat(p.latitude);
-                    const lon = parseFloat(p.longitude);
-                    if (!isNaN(lat) && !isNaN(lon)) {
-                        window.L.circleMarker([lat, lon], {
-                            radius: 6,
-                            fillColor: getIntensityColor(p.best),
-                            color: isDark ? "#fff" : "#000",
-                            weight: 0.5,
-                            opacity: 1,
-                            fillOpacity: 0.8
-                        })
-                        .bindPopup(`
-                            <div style="font-family: 'Inter', sans-serif;">
-                                <strong style="color: #2563eb">${p.conflict_name || 'Conflict Event'}</strong><br/>
-                                <div style="margin-top: 8px; font-size: 12px; line-height: 1.5;">
+                if (markerLayerRef.current) {
+                    markerLayerRef.current.clearLayers();
+                    points.forEach(p => {
+                        const lat = parseFloat(p.latitude), lon = parseFloat(p.longitude);
+                        if (!isNaN(lat) && !isNaN(lon)) {
+                            L.circleMarker([lat, lon], {
+                                radius: 6, fillColor: getIntensityColor(p.best), color: isDark ? "#fff" : "#000",
+                                weight: 0.5, opacity: 1, fillOpacity: 0.8
+                            })
+                            .bindPopup(`
+                                <div style="font-family: sans-serif;">
+                                    <strong style="color: #2563eb">${p.conflict_name || 'Event'}</strong><br/>
                                     <b>Location:</b> ${p.adm_1}, ${p.adm_2}<br/>
-                                    <b>Type:</b> ${p.official_conflict_type}<br/>
-                                    <b>Date:</b> ${p.date_start ? p.date_start.split(' ')[0] : 'N/A'}<br/>
-                                    <b>Fatalities:</b> <span style="color: ${getIntensityColor(p.best)}">${p.best || 0}</span>
+                                    <b>Fatalities:</b> ${p.best || 0}
                                 </div>
-                            </div>
-                        `)
-                        .addTo(markerLayerRef.current);
-                    }
-                });
+                            `)
+                            .addTo(markerLayerRef.current);
+                        }
+                    });
+                }
             }, [points, isDark]);
 
+            return <div id="map"></div>;
+        };
+
+        const App = () => {
+            const [data, setData] = useState([]);
+            const [loading, setLoading] = useState(true);
+            const [isDark, setIsDark] = useState(false);
+            const [filters, setFilters] = useState({ type: 'all', state: 'all', minYear: 2000 });
+
+            useEffect(() => {
+                document.getElementById('loading-status').innerText = "Downloading Conflict Data (3.5MB)...";
+                Papa.parse('filtered_conflict_data.csv', {
+                    download: true, header: true, skipEmptyLines: true,
+                    complete: (results) => {
+                        setData(results.data.filter(d => d.latitude && d.longitude));
+                        setLoading(false);
+                        document.getElementById('loading-screen').style.display = 'none';
+                    }
+                });
+            }, []);
+
+            const filteredData = useMemo(() => {
+                return data.filter(d => {
+                    const matchType = filters.type === 'all' || d.official_conflict_type === filters.type;
+                    const matchState = filters.state === 'all' || d.adm_1.toLowerCase().includes(filters.state.toLowerCase());
+                    const matchYear = parseInt(d.year) >= filters.minYear;
+                    return matchType && matchState && matchYear;
+                });
+            }, [data, filters]);
+
+            const chartData = useMemo(() => {
+                const counts = {};
+                filteredData.forEach(d => { counts[d.year] = (counts[d.year] || 0) + 1; });
+                return Object.keys(counts).sort().map(year => ({ year, events: counts[year] }));
+            }, [filteredData]);
+
+            const nwCount = filteredData.filter(d => d.Analysis_Region === 'North West').length;
+            const neCount = filteredData.filter(d => d.Analysis_Region === 'North East').length;
+
+            useEffect(() => { document.body.className = isDark ? 'dark' : 'light'; }, [isDark]);
+
             return (
-                <div id="map">
-                    <div style={{ position: 'absolute', bottom: 20, right: 20, zIndex: 1000 }}>
-                        <div className="legend">
-                            <strong>Fatality Intensity</strong>
-                            <div className="legend-item"><div className="dot" style={{backgroundColor: INTENSITY_COLORS.low}}></div> 0 - 10 Deaths</div>
-                            <div className="legend-item"><div className="dot" style={{backgroundColor: INTENSITY_COLORS.medium}}></div> 11 - 50 Deaths</div>
-                            <div className="legend-item"><div className="dot" style={{backgroundColor: INTENSITY_COLORS.high}}></div> 51 - 100 Deaths</div>
-                            <div className="legend-item"><div className="dot" style={{backgroundColor: INTENSITY_COLORS.extreme}}></div> 100+ Deaths</div>
+                <div id="root">
+                    <div className="sidebar">
+                        <div className="header">
+                            <h1>Nigeria Conflict Map</h1>
+                            <p>North West & North East analysis (2000-2024)</p>
+                        </div>
+                        <div className="controls">
+                            <button className="btn" onClick={() => setIsDark(!isDark)}>{isDark ? '☀️ Light' : '🌙 Dark'}</button>
+                            <button className="btn btn-primary" onClick={() => window.open('https://github.com/dicocorobe/ICT4DNigeria')}>📁 Repo</button>
+                        </div>
+                        <div className="stats-grid">
+                            <div className="stat-card nw"><div className="stat-label">North West</div><div className="stat-value">{nwCount}</div></div>
+                            <div className="stat-card ne"><div className="stat-label">North East</div><div className="stat-value">{neCount}</div></div>
+                        </div>
+                        <div className="filter-section">
+                            <div className="filter-group">
+                                <label>Conflict Type</label>
+                                <select onChange={e => setFilters({...filters, type: e.target.value})}>
+                                    <option value="all">All Types</option>
+                                    <option value="State-based conflict">State-based</option>
+                                    <option value="Non-state conflict">Non-state</option>
+                                    <option value="One-sided violence">One-sided</option>
+                                </select>
+                            </div>
+                            <div className="filter-group">
+                                <label>State</label>
+                                <select onChange={e => setFilters({...filters, state: e.target.value})}>
+                                    <option value="all">All States</option>
+                                    {Object.values(REGIONS).flat().map(s => <option key={s} value={s}>{s}</option>)}
+                                </select>
+                            </div>
+                            <div className="filter-group">
+                                <label>From Year: {filters.minYear}</label>
+                                <input type="range" min="2000" max="2024" value={filters.minYear} onChange={e => setFilters({...filters, minYear: parseInt(e.target.value)})} />
+                            </div>
+                        </div>
+                        <div style={{ marginTop: 'auto', height: '150px' }}>
+                            <ResponsiveContainer width="100%" height="100%">
+                                <BarChart data={chartData}>
+                                    <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                                    <XAxis dataKey="year" fontSize={10} />
+                                    <Tooltip />
+                                    <Bar dataKey="events" fill="#2563eb" />
+                                </BarChart>
+                            </ResponsiveContainer>
                         </div>
                     </div>
+                    <MapContainer points={filteredData} isDark={isDark} />
                 </div>
             );
         };
 
-        const root = window.ReactDOM.createRoot(document.getElementById('root'));
-        root.render(<App />);
+        ReactDOM.createRoot(document.getElementById('root')).render(<App />);
     </script>
 </body>
 </html>
