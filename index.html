@@ -20,6 +20,7 @@
             --border: #e2e8f0;
             --nw: #facc15;
             --ne: #ef4444;
+            --school: #10b981;
         }
 
         .dark {
@@ -76,12 +77,15 @@
             border: 1px solid var(--border);
             box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
             font-size: 0.75rem;
-            min-width: 150px;
+            min-width: 180px;
             color: var(--text);
         }
         .legend-title { font-weight: 700; margin-bottom: 8px; border-bottom: 1px solid var(--border); padding-bottom: 4px; }
+        .legend-section { margin-bottom: 12px; }
+        .legend-section-title { font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.05em; opacity: 0.6; margin-bottom: 6px; font-weight: 700; }
         .legend-item { display: flex; align-items: center; gap: 10px; margin-bottom: 4px; }
         .legend-color { width: 14px; height: 14px; border-radius: 4px; }
+        .legend-icon { display: flex; align-items: center; justify-content: center; width: 14px; height: 14px; color: var(--school); }
 
         #error-console {
             position: fixed; bottom: 0; left: 0; right: 0;
@@ -101,6 +105,22 @@
         .simple-bar:hover { fill: #ea580c; }
         .chart-axis { stroke: #cbd5e1; stroke-width: 1; }
         .chart-text { font-size: 10px; fill: #64748b; }
+
+        /* School Icon Styling */
+        .school-icon-container {
+            background: white;
+            border: 2px solid var(--school);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+        .school-icon-container svg {
+            width: 14px;
+            height: 14px;
+            fill: var(--school);
+        }
         
         @media (max-width: 768px) {
             #root { flex-direction: column; }
@@ -204,7 +224,7 @@
         };
 
         const Legend = () => {
-            const items = [
+            const conflictItems = [
                 { label: '100+ Fatalities', color: '#7f1d1d' },
                 { label: '10-100 Fatalities', color: '#f97316' },
                 { label: '1-10 Fatalities', color: '#fbbf24' }
@@ -212,20 +232,42 @@
 
             return (
                 <div className="map-legend">
-                    <div className="legend-title">Conflict Intensity</div>
-                    {items.map(item => (
-                        <div key={item.label} className="legend-item">
-                            <div className="legend-color" style={{ backgroundColor: item.color }}></div>
-                            <span>{item.label}</span>
+                    <div className="legend-title">Map Layers</div>
+                    
+                    <div className="legend-section">
+                        <div className="legend-section-title">Conflict Intensity</div>
+                        {conflictItems.map(item => (
+                            <div key={item.label} className="legend-item">
+                                <div className="legend-color" style={{ backgroundColor: item.color }}></div>
+                                <span>{item.label}</span>
+                            </div>
+                        ))}
+                    </div>
+
+                    <div className="legend-section">
+                        <div className="legend-section-title">Education Facilities</div>
+                        <div className="legend-item">
+                            <div className="legend-icon">
+                                <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor">
+                                    <path d="M22 10v11a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V10M2 7l10-5 10 5M6 12v4M10 12v4M14 12v4M18 12v4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                                </svg>
+                            </div>
+                            <span>School Facility</span>
                         </div>
-                    ))}
+                        <div className="legend-item">
+                            <div className="legend-color" style={{ backgroundColor: 'rgba(16, 185, 129, 0.2)', border: '1px solid #10b981' }}></div>
+                            <span>School Area</span>
+                        </div>
+                    </div>
                 </div>
             );
         };
 
-        const MapContainer = ({ points, isDark }) => {
+        const MapContainer = ({ points, eduPoints, eduPolygons, isDark }) => {
             const mapRef = useRef(null);
             const clusterGroupRef = useRef(null);
+            const eduLayerRef = useRef(null);
+            const eduPolyLayerRef = useRef(null);
             
             useEffect(() => {
                 if (!mapRef.current) {
@@ -237,7 +279,7 @@
                     });
                     L.control.zoom({ position: 'topright' }).addTo(mapRef.current);
                     
-                    // Initialize Marker Cluster Group
+                    // Initialize Marker Cluster Group for Conflict
                     clusterGroupRef.current = L.markerClusterGroup({
                         showCoverageOnHover: true,
                         zoomToBoundsOnClick: true,
@@ -247,6 +289,10 @@
                     });
                     
                     mapRef.current.addLayer(clusterGroupRef.current);
+
+                    // Initialize FeatureGroups for Education
+                    eduLayerRef.current = L.featureGroup().addTo(mapRef.current);
+                    eduPolyLayerRef.current = L.featureGroup().addTo(mapRef.current);
                 }
             }, []);
 
@@ -261,6 +307,7 @@
                 return () => mapRef.current.removeLayer(tiles);
             }, [isDark]);
 
+            // Conflict Layer Update
             useEffect(() => {
                 if (clusterGroupRef.current) {
                     clusterGroupRef.current.clearLayers();
@@ -269,7 +316,6 @@
                         const lat = parseFloat(p.latitude), lon = parseFloat(p.longitude);
                         if (!isNaN(lat) && !isNaN(lon)) {
                             const d = parseInt(p.best) || 0;
-                            // Color scale: Dark Red (High) to Light Yellow (Low)
                             const color = d > 100 ? '#7f1d1d' : 
                                          d > 50  ? '#ef4444' : 
                                          d > 10  ? '#f97316' : 
@@ -302,28 +348,103 @@
                 }
             }, [points, isDark]);
 
+            // Education Layers Update
+            useEffect(() => {
+                if (eduLayerRef.current && eduPolyLayerRef.current) {
+                    eduLayerRef.current.clearLayers();
+                    eduPolyLayerRef.current.clearLayers();
+
+                    const schoolIcon = L.divIcon({
+                        className: 'school-icon-container',
+                        html: `<svg viewBox="0 0 24 24"><path d="M22 10v11a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V10M2 7l10-5 10 5M6 12v4M10 12v4M14 12v4M18 12v4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
+                        iconSize: [24, 24],
+                        iconAnchor: [12, 12]
+                    });
+
+                    // Add Polygons first (so they are under points)
+                    L.geoJSON(eduPolygons, {
+                        style: {
+                            color: '#10b981',
+                            weight: 2,
+                            opacity: 0.8,
+                            fillColor: '#10b981',
+                            fillOpacity: 0.2
+                        },
+                        onEachFeature: (feature, layer) => {
+                            layer.bindPopup(`
+                                <div style="font-family: 'Inter', sans-serif;">
+                                    <strong style="color: #10b981; font-size: 0.9rem;">${feature.properties.name || 'Education Area'}</strong><br/>
+                                    <div style="margin-top: 4px; font-size: 0.8rem;">
+                                        <b>Type:</b> ${feature.properties.amenity || feature.properties.building || 'N/A'}<br/>
+                                        <b>Region:</b> ${feature.properties.Analysis_Region}
+                                    </div>
+                                </div>
+                            `);
+                        }
+                    }).addTo(eduPolyLayerRef.current);
+
+                    // Add Points
+                    L.geoJSON(eduPoints, {
+                        pointToLayer: (feature, latlng) => {
+                            return L.marker(latlng, { icon: schoolIcon });
+                        },
+                        onEachFeature: (feature, layer) => {
+                            layer.bindPopup(`
+                                <div style="font-family: 'Inter', sans-serif;">
+                                    <strong style="color: #10b981; font-size: 0.9rem;">${feature.properties.name || feature.properties['name:en'] || 'School'}</strong><br/>
+                                    <div style="margin-top: 4px; font-size: 0.8rem;">
+                                        <b>Type:</b> ${feature.properties.amenity || 'School'}<br/>
+                                        <b>Region:</b> ${feature.properties.Analysis_Region}
+                                    </div>
+                                </div>
+                            `);
+                        }
+                    }).addTo(eduLayerRef.current);
+                }
+            }, [eduPoints, eduPolygons]);
+
             return <div id="map"></div>;
         };
 
         const App = () => {
             const [data, setData] = useState([]);
+            const [eduPoints, setEduPoints] = useState({ features: [] });
+            const [eduPolygons, setEduPolygons] = useState({ features: [] });
             const [loading, setLoading] = useState(true);
             const [isDark, setIsDark] = useState(false);
             const [filters, setFilters] = useState({ type: 'all', state: 'all', minYear: 2000 });
 
             useEffect(() => {
-                document.getElementById('loading-status').innerText = "Loading Nigeria Conflict Data...";
-                Papa.parse('filtered_conflict_data.csv', {
-                    download: true, header: true, skipEmptyLines: true,
-                    complete: (results) => {
-                        setData(results.data.filter(d => d.latitude && d.longitude));
+                document.getElementById('loading-status').innerText = "Loading Nigeria Conflict & Education Data...";
+                
+                const loadData = async () => {
+                    try {
+                        // Load Conflict Data
+                        Papa.parse('filtered_conflict_data.csv', {
+                            download: true, header: true, skipEmptyLines: true,
+                            complete: (results) => {
+                                setData(results.data.filter(d => d.latitude && d.longitude));
+                            }
+                        });
+
+                        // Load Education Data
+                        const pointsRes = await fetch('filtered_education_points.geojson');
+                        const pointsData = await pointsRes.json();
+                        setEduPoints(pointsData);
+
+                        const polyRes = await fetch('filtered_education_polygons.geojson');
+                        const polyData = await polyRes.json();
+                        setEduPolygons(polyData);
+
                         setLoading(false);
                         document.getElementById('loading-screen').style.display = 'none';
-                    },
-                    error: (err) => {
-                        document.getElementById('loading-status').innerText = "Error: Could not load data.";
+                    } catch (err) {
+                        document.getElementById('loading-status').innerText = "Error loading data.";
+                        console.error(err);
                     }
-                });
+                };
+
+                loadData();
             }, []);
 
             const filteredData = useMemo(() => {
@@ -334,6 +455,20 @@
                     return matchType && matchState && matchYear;
                 });
             }, [data, filters]);
+
+            const filteredEduPoints = useMemo(() => {
+                if (filters.state === 'all') return eduPoints.features;
+                return eduPoints.features.filter(f => 
+                    f.properties.Analysis_Region && f.properties.Analysis_Region.toLowerCase().includes(filters.state.toLowerCase())
+                );
+            }, [eduPoints, filters.state]);
+
+            const filteredEduPolygons = useMemo(() => {
+                if (filters.state === 'all') return eduPolygons.features;
+                return eduPolygons.features.filter(f => 
+                    f.properties.Analysis_Region && f.properties.Analysis_Region.toLowerCase().includes(filters.state.toLowerCase())
+                );
+            }, [eduPolygons, filters.state]);
 
             const chartData = useMemo(() => {
                 const counts = {};
@@ -372,6 +507,14 @@
                                 </select>
                             </div>
                             <div className="filter-group">
+                                <label>Analysis Region</label>
+                                <select onChange={e => setFilters({...filters, state: e.target.value})}>
+                                    <option value="all">All Regions</option>
+                                    <option value="North West">North West</option>
+                                    <option value="North East">North East</option>
+                                </select>
+                            </div>
+                            <div className="filter-group">
                                 <label>From Year: {filters.minYear}</label>
                                 <input type="range" min="2000" max="2024" value={filters.minYear} onChange={e => setFilters({...filters, minYear: parseInt(e.target.value)})} />
                             </div>
@@ -379,7 +522,12 @@
                         <SimpleChart data={chartData} isDark={isDark} />
                     </div>
                     <div style={{ flexGrow: 1, position: 'relative', height: '100%' }}>
-                        <MapContainer points={filteredData} isDark={isDark} />
+                        <MapContainer 
+                            points={filteredData} 
+                            eduPoints={filteredEduPoints} 
+                            eduPolygons={filteredEduPolygons} 
+                            isDark={isDark} 
+                        />
                         <Legend />
                     </div>
                 </div>
