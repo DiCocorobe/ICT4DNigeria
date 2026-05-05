@@ -65,6 +65,14 @@
         .marker-cluster-large { background-color: rgba(239, 68, 68, 0.6); } /* Red */
         .marker-cluster-large div { background-color: rgba(220, 38, 38, 0.6); }
 
+        /* School Marker Cluster Styling - Green Scale */
+        .school-cluster-small { background-color: rgba(187, 247, 208, 0.6); } /* Light Green */
+        .school-cluster-small div { background-color: rgba(134, 239, 172, 0.6); }
+        .school-cluster-medium { background-color: rgba(74, 222, 128, 0.6); } /* Medium Green */
+        .school-cluster-medium div { background-color: rgba(34, 197, 94, 0.6); }
+        .school-cluster-large { background-color: rgba(22, 163, 74, 0.6); } /* Deep Green */
+        .school-cluster-large div { background-color: rgba(21, 128, 61, 0.6); }
+
         /* Map Legend */
         .map-legend {
             position: absolute;
@@ -230,6 +238,12 @@
                 { label: '1-10 Fatalities', color: '#fbbf24' }
             ];
 
+            const schoolDensityItems = [
+                { label: 'High Density (50+)', color: '#15803d' },
+                { label: 'Medium Density (10-50)', color: '#22c55e' },
+                { label: 'Low Density (<10)', color: '#86efac' }
+            ];
+
             return (
                 <div className="map-legend">
                     <div className="legend-title">Map Layers</div>
@@ -245,18 +259,28 @@
                     </div>
 
                     <div className="legend-section">
-                        <div className="legend-section-title">Education Facilities</div>
+                        <div className="legend-section-title">School Density</div>
+                        {schoolDensityItems.map(item => (
+                            <div key={item.label} className="legend-item">
+                                <div className="legend-color" style={{ backgroundColor: item.color }}></div>
+                                <span>{item.label}</span>
+                            </div>
+                        ))}
+                    </div>
+
+                    <div className="legend-section">
+                        <div className="legend-section-title">Facilities</div>
                         <div className="legend-item">
                             <div className="legend-icon">
                                 <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor">
                                     <path d="M22 10v11a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V10M2 7l10-5 10 5M6 12v4M10 12v4M14 12v4M18 12v4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
                                 </svg>
                             </div>
-                            <span>School Facility</span>
+                            <span>Individual School</span>
                         </div>
                         <div className="legend-item">
                             <div className="legend-color" style={{ backgroundColor: 'rgba(16, 185, 129, 0.2)', border: '1px solid #10b981' }}></div>
-                            <span>School Area</span>
+                            <span>School Area (Polygon)</span>
                         </div>
                     </div>
                 </div>
@@ -266,7 +290,7 @@
         const MapContainer = ({ points, eduPoints, eduPolygons, isDark }) => {
             const mapRef = useRef(null);
             const clusterGroupRef = useRef(null);
-            const eduLayerRef = useRef(null);
+            const eduClusterGroupRef = useRef(null);
             const eduPolyLayerRef = useRef(null);
             
             useEffect(() => {
@@ -279,7 +303,7 @@
                     });
                     L.control.zoom({ position: 'topright' }).addTo(mapRef.current);
                     
-                    // Initialize Marker Cluster Group for Conflict
+                    // Conflict Cluster Group
                     clusterGroupRef.current = L.markerClusterGroup({
                         showCoverageOnHover: true,
                         zoomToBoundsOnClick: true,
@@ -287,11 +311,31 @@
                         chunkedLoading: true,
                         maxClusterRadius: 50
                     });
-                    
                     mapRef.current.addLayer(clusterGroupRef.current);
 
-                    // Initialize FeatureGroups for Education
-                    eduLayerRef.current = L.featureGroup().addTo(mapRef.current);
+                    // Education Cluster Group (Custom Green Scaling)
+                    eduClusterGroupRef.current = L.markerClusterGroup({
+                        showCoverageOnHover: true,
+                        zoomToBoundsOnClick: true,
+                        spiderfyOnMaxZoom: true,
+                        chunkedLoading: true,
+                        maxClusterRadius: 50,
+                        iconCreateFunction: function(cluster) {
+                            const count = cluster.getChildCount();
+                            let className = 'school-cluster-';
+                            if (count < 10) className += 'small';
+                            else if (count < 50) className += 'medium';
+                            else className += 'large';
+
+                            return L.divIcon({
+                                html: `<div><span>${count}</span></div>`,
+                                className: `marker-cluster ${className}`,
+                                iconSize: L.point(40, 40)
+                            });
+                        }
+                    });
+                    mapRef.current.addLayer(eduClusterGroupRef.current);
+
                     eduPolyLayerRef.current = L.featureGroup().addTo(mapRef.current);
                 }
             }, []);
@@ -350,8 +394,8 @@
 
             // Education Layers Update
             useEffect(() => {
-                if (eduLayerRef.current && eduPolyLayerRef.current) {
-                    eduLayerRef.current.clearLayers();
+                if (eduClusterGroupRef.current && eduPolyLayerRef.current) {
+                    eduClusterGroupRef.current.clearLayers();
                     eduPolyLayerRef.current.clearLayers();
 
                     const schoolIcon = L.divIcon({
@@ -361,7 +405,7 @@
                         iconAnchor: [12, 12]
                     });
 
-                    // Add Polygons first (so they are under points)
+                    // Add Polygons
                     L.geoJSON(eduPolygons, {
                         style: {
                             color: '#10b981',
@@ -383,8 +427,8 @@
                         }
                     }).addTo(eduPolyLayerRef.current);
 
-                    // Add Points
-                    L.geoJSON(eduPoints, {
+                    // Add Points to Cluster Group
+                    const eduMarkers = L.geoJSON(eduPoints, {
                         pointToLayer: (feature, latlng) => {
                             return L.marker(latlng, { icon: schoolIcon });
                         },
@@ -399,7 +443,9 @@
                                 </div>
                             `);
                         }
-                    }).addTo(eduLayerRef.current);
+                    });
+                    
+                    eduClusterGroupRef.current.addLayer(eduMarkers);
                 }
             }, [eduPoints, eduPolygons]);
 
