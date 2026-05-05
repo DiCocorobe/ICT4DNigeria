@@ -409,7 +409,6 @@
             // Education Layers Update
             useEffect(() => {
                 if (eduClusterGroupRef.current && eduPolyLayerRef.current) {
-                    console.log("Updating Education Layers...", { pointsCount: eduPoints.length, polyCount: eduPolygons.length });
                     eduClusterGroupRef.current.clearLayers();
                     eduPolyLayerRef.current.clearLayers();
 
@@ -468,7 +467,6 @@
                             }
                         });
                         
-                        console.log(`Adding ${markers.length} school markers to cluster group`);
                         eduClusterGroupRef.current.addLayers(markers);
                     }
                 }
@@ -521,9 +519,9 @@
             const filteredData = useMemo(() => {
                 return data.filter(d => {
                     const matchType = filters.type === 'all' || d.official_conflict_type === filters.type;
-                    const matchState = filters.state === 'all' || d.adm_1.toLowerCase().includes(filters.state.toLowerCase());
+                    const matchRegion = filters.state === 'all' || (d.Analysis_Region && d.Analysis_Region.toLowerCase().includes(filters.state.toLowerCase()));
                     const matchYear = parseInt(d.year) >= filters.minYear;
-                    return matchType && matchState && matchYear;
+                    return matchType && matchRegion && matchYear;
                 });
             }, [data, filters]);
 
