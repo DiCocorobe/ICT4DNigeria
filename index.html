@@ -149,6 +149,60 @@
             .sidebar { width: 100%; height: 50vh; }
             #map { height: 50vh; }
         }
+
+        /* Modal Styles */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 10001;
+        }
+        .modal-content {
+            background: var(--panel);
+            padding: 24px;
+            border-radius: 12px;
+            width: 90%;
+            max-width: 400px;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+            color: var(--text);
+        }
+        .modal-content h2 { margin-bottom: 16px; font-size: 1.25rem; color: var(--primary); }
+        .form-group { margin-bottom: 16px; }
+        .form-group label { display: block; font-size: 0.875rem; font-weight: 600; margin-bottom: 4px; }
+        .form-group input { width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg); color: var(--text); }
+        .modal-actions { display: flex; gap: 12px; margin-top: 24px; }
+        .btn-ghost { background: transparent; border: 1px solid var(--border); }
+
+        /* Table Styles for Reports */
+        .reports-table-container { 
+            max-height: 400px; 
+            overflow-y: auto; 
+            margin-top: 16px; 
+            border: 1px solid var(--border);
+            border-radius: 8px;
+        }
+        .reports-table { 
+            width: 100%; 
+            border-collapse: collapse; 
+            font-size: 0.75rem;
+        }
+        .reports-table th, .reports-table td { 
+            padding: 10px; 
+            text-align: left; 
+            border-bottom: 1px solid var(--border); 
+        }
+        .reports-table th { 
+            background: var(--bg); 
+            position: sticky; 
+            top: 0; 
+            font-weight: 700;
+        }
     </style>
 </head>
 <body class="light">
@@ -482,6 +536,61 @@
             const [loading, setLoading] = useState(true);
             const [isDark, setIsDark] = useState(false);
             const [filters, setFilters] = useState({ type: 'all', state: 'all', minYear: 2000 });
+            
+            // Report Modal State
+            const [showModal, setShowModal] = useState(false);
+            const [showViewReports, setShowViewReports] = useState(false);
+            const [reportData, setReportData] = useState({ workerId: '', event: '' });
+            const [viewReportsData, setViewReportsData] = useState([]);
+            const [saving, setSaving] = useState(false);
+
+            const handleSaveReport = async () => {
+                if (!reportData.workerId || !reportData.event) {
+                    alert('Please fill all fields');
+                    return;
+                }
+                setSaving(true);
+                try {
+                    const response = await fetch('/save-report', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(reportData)
+                    });
+                    if (response.ok) {
+                        alert('Report saved successfully!');
+                        setShowModal(false);
+                        setReportData({ workerId: '', event: '' });
+                    } else {
+                        throw new Error('Failed to save');
+                    }
+                } catch (err) {
+                    alert('Error saving report. Make sure the server is running.');
+                } finally {
+                    setSaving(false);
+                }
+            };
+
+            const fetchReports = async () => {
+                try {
+                    const response = await fetch('/get-reports');
+                    const csvText = await response.text();
+                    Papa.parse(csvText, {
+                        header: true,
+                        skipEmptyLines: true,
+                        complete: (results) => {
+                            setViewReportsData(results.data);
+                        }
+                    });
+                } catch (err) {
+                    console.error('Error fetching reports:', err);
+                }
+            };
+
+            useEffect(() => {
+                if (showViewReports) {
+                    fetchReports();
+                }
+            }, [showViewReports]);
 
             useEffect(() => {
                 document.getElementById('loading-status').innerText = "Loading Nigeria Conflict & Education Data...";
@@ -559,7 +668,8 @@
                         </div>
                         <div className="controls">
                             <button className="btn" onClick={() => setIsDark(!isDark)}>{isDark ? '☀️ Light' : '🌙 Dark'}</button>
-                            <button className="btn btn-primary" onClick={() => window.open('https://github.com/dicocorobe/ICT4DNigeria')}>📁 Source</button>
+                            <button className="btn btn-primary" onClick={() => setShowModal(true)}>📝 Field Report</button>
+                            <button className="btn" onClick={() => setShowViewReports(true)}>📊 View Reports</button>
                         </div>
                         <div className="stats-grid">
                             <div className="stat-card nw"><div className="stat-label">North West</div><div className="stat-value">{nwCount}</div></div>
@@ -599,6 +709,76 @@
                         />
                         <Legend />
                     </div>
+
+                    {/* Report Modal */}
+                    {showModal && (
+                        <div className="modal-overlay">
+                            <div className="modal-content">
+                                <h2>Report New Event</h2>
+                                <div className="form-group">
+                                    <label>Field Worker ID</label>
+                                    <input 
+                                        type="text" 
+                                        value={reportData.workerId} 
+                                        onChange={e => setReportData({...reportData, workerId: e.target.value})}
+                                        placeholder="e.g. WORKER-001"
+                                    />
+                                </div>
+                                <div className="form-group">
+                                    <label>Event Description</label>
+                                    <input 
+                                        type="text" 
+                                        value={reportData.event} 
+                                        onChange={e => setReportData({...reportData, event: e.target.value})}
+                                        placeholder="Describe the event"
+                                    />
+                                </div>
+                                <div className="modal-actions">
+                                    <button className="btn btn-ghost" onClick={() => setShowModal(false)}>Cancel</button>
+                                    <button className="btn btn-primary" onClick={handleSaveReport} disabled={saving}>
+                                        {saving ? 'Saving...' : 'Save Report'}
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* View Reports Modal */}
+                    {showViewReports && (
+                        <div className="modal-overlay">
+                            <div className="modal-content" style={{ maxWidth: '600px' }}>
+                                <h2>Field Reports History</h2>
+                                <div className="reports-table-container">
+                                    <table className="reports-table">
+                                        <thead>
+                                            <tr>
+                                                <th>Worker</th>
+                                                <th>Event</th>
+                                                <th>Timestamp</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {viewReportsData.length === 0 ? (
+                                                <tr><td colSpan="3" style={{ textAlign: 'center' }}>No reports found.</td></tr>
+                                            ) : (
+                                                viewReportsData.map((r, i) => (
+                                                    <tr key={i}>
+                                                        <td>{r.Field_Worker_ID}</td>
+                                                        <td>{r.Event}</td>
+                                                        <td>{new Date(r.Timestamp).toLocaleDateString()}</td>
+                                                    </tr>
+                                                ))
+                                            )}
+                                        </tbody>
+                                    </table>
+                                </div>
+                                <div className="modal-actions">
+                                    <button className="btn btn-primary" onClick={() => setShowViewReports(false)}>Close</button>
+                                </div>
+
+                            </div>
+                        </div>
+                    )}
                 </div>
             );
         };

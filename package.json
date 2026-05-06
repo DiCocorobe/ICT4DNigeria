@@ -1,0 +1,26 @@
+{
+  "name": "ict4dnigeria",
+  "version": "1.0.0",
+  "description": "Crash course examn uploaded conflict data in Nigeria, Literacy data and Education facilities points and polygones",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/DiCocorobe/ICT4DNigeria.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/DiCocorobe/ICT4DNigeria/issues"
+  },
+  "homepage": "https://github.com/DiCocorobe/ICT4DNigeria#readme",
+  "dependencies": {
+    "body-parser": "^2.2.2",
+    "cors": "^2.8.6",
+    "express": "^5.2.1"
+  }
+}
