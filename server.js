@@ -6,7 +6,7 @@ const path = require('path');
 
 const app = express();
 const PORT = 3000;
-const CSV_FILE = path.join(__dirname, 'field_reports.csv');
+const CSV_FILE = path.join(__dirname, 'data', 'field_reports.csv');
 
 app.use(cors());
 app.use(bodyParser.json());

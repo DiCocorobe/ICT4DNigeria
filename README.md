@@ -14,9 +14,9 @@ Interactive dashboard for analyzing the relationship between conflict intensity 
 
 ## Data Processing
 Datasets are filtered geographically specifically for the North West and North East regions using coordinate bounding boxes.
-- `filtered_conflict_data.csv`: Conflict incident records.
-- `filtered_education_points.geojson`: Specific educational facility locations.
-- `filtered_education_polygons.geojson`: Educational campus boundaries.
+- `data/filtered_conflict_data.csv`: Conflict incident records.
+- `data/filtered_education_points.geojson`: Specific educational facility locations.
+- `data/filtered_education_polygons.geojson`: Educational campus boundaries.
 
 ## Documentation
-For a detailed breakdown of the development cycle and technical decisions, see [PROCESS.md](./PROCESS.md).
+For a detailed breakdown of the development cycle and technical decisions, see [docs/PROCESS.md](./docs/PROCESS.md).
