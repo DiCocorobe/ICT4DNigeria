@@ -1,18 +1,22 @@
-# ICT4DNigeria
-Crash course examn
-uploaded conflict data in Nigeria, Literacy data and Education facilities points and polygones
+# Conflict Impact on Education
+Nigerian Chapter: North East and North West Regions
 
-## Interactive Dashboards
-- **[Interactive Conflict Map](https://dicocorobe.github.io/ICT4DNigeria/)**: Analysis of conflict events in North West and North East Nigeria (2000-Present).
+Interactive dashboard for analyzing the relationship between conflict intensity and educational infrastructure in Northern Nigeria.
 
-## Available Skills
-... (rest of the file)
+## [🚀 View Interactive Dashboard](https://dicocorobe.github.io/ICT4DNigeria/)
 
-### CSV Visualizer Builder
-This repository includes a specialized skill for building interactive, web-based CSV visualizers. It provides a structured workflow for:
-- **Data Analysis:** Analyzing CSV structure and identifying key metrics.
-- **Design & Planning:** Drafting modern dashboard layouts.
-- **Implementation:** Building functional prototypes using React, TypeScript, and Recharts.
-- **Validation:** Ensuring data accuracy and responsiveness.
+## Features
+- **Temporal Analysis:** Visualizing annual conflict trends from 2000 to 2024.
+- **Geospatial Mapping:** Incident clustering with intensity scaling (Yellow-Orange-Red).
+- **Education Infrastructure:** Integrated school facility mapping (points and polygons) with density-aware clustering.
+- **Interactive Filtering:** Filter by conflict type, region, and custom year ranges.
+- **Prototype Reporting:** Built-in "Field Report" prototype for event recording.
 
-To use this skill, Gemini CLI refers to the `csv-visualizer-builder.skill` file for expert procedural guidance.
+## Data Processing
+Datasets are filtered geographically specifically for the North West and North East regions using coordinate bounding boxes.
+- `filtered_conflict_data.csv`: Conflict incident records.
+- `filtered_education_points.geojson`: Specific educational facility locations.
+- `filtered_education_polygons.geojson`: Educational campus boundaries.
+
+## Documentation
+For a detailed breakdown of the development cycle and technical decisions, see [PROCESS.md](./PROCESS.md).
