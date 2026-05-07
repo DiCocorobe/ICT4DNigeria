@@ -539,58 +539,17 @@
             
             // Report Modal State
             const [showModal, setShowModal] = useState(false);
-            const [showViewReports, setShowViewReports] = useState(false);
             const [reportData, setReportData] = useState({ workerId: '', event: '' });
-            const [viewReportsData, setViewReportsData] = useState([]);
-            const [saving, setSaving] = useState(false);
 
-            const handleSaveReport = async () => {
+            const handleSaveReport = () => {
                 if (!reportData.workerId || !reportData.event) {
                     alert('Please fill all fields');
                     return;
                 }
-                setSaving(true);
-                try {
-                    const response = await fetch('/save-report', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(reportData)
-                    });
-                    if (response.ok) {
-                        alert('Report saved successfully!');
-                        setShowModal(false);
-                        setReportData({ workerId: '', event: '' });
-                    } else {
-                        throw new Error('Failed to save');
-                    }
-                } catch (err) {
-                    alert('Error saving report. Make sure the server is running.');
-                } finally {
-                    setSaving(false);
-                }
+                alert('data recorded');
+                setShowModal(false);
+                setReportData({ workerId: '', event: '' });
             };
-
-            const fetchReports = async () => {
-                try {
-                    const response = await fetch('/get-reports');
-                    const csvText = await response.text();
-                    Papa.parse(csvText, {
-                        header: true,
-                        skipEmptyLines: true,
-                        complete: (results) => {
-                            setViewReportsData(results.data);
-                        }
-                    });
-                } catch (err) {
-                    console.error('Error fetching reports:', err);
-                }
-            };
-
-            useEffect(() => {
-                if (showViewReports) {
-                    fetchReports();
-                }
-            }, [showViewReports]);
 
             useEffect(() => {
                 document.getElementById('loading-status').innerText = "Loading Nigeria Conflict & Education Data...";
@@ -669,7 +628,6 @@
                         <div className="controls">
                             <button className="btn" onClick={() => setIsDark(!isDark)}>{isDark ? '☀️ Light' : '🌙 Dark'}</button>
                             <button className="btn btn-primary" onClick={() => setShowModal(true)}>📝 Field Report</button>
-                            <button className="btn" onClick={() => setShowViewReports(true)}>📊 View Reports</button>
                         </div>
                         <div className="stats-grid">
                             <div className="stat-card nw"><div className="stat-label">North West</div><div className="stat-value">{nwCount}</div></div>
@@ -735,47 +693,10 @@
                                 </div>
                                 <div className="modal-actions">
                                     <button className="btn btn-ghost" onClick={() => setShowModal(false)}>Cancel</button>
-                                    <button className="btn btn-primary" onClick={handleSaveReport} disabled={saving}>
-                                        {saving ? 'Saving...' : 'Save Report'}
+                                    <button className="btn btn-primary" onClick={handleSaveReport}>
+                                        Save Report
                                     </button>
                                 </div>
-                            </div>
-                        </div>
-                    )}
-
-                    {/* View Reports Modal */}
-                    {showViewReports && (
-                        <div className="modal-overlay">
-                            <div className="modal-content" style={{ maxWidth: '600px' }}>
-                                <h2>Field Reports History</h2>
-                                <div className="reports-table-container">
-                                    <table className="reports-table">
-                                        <thead>
-                                            <tr>
-                                                <th>Worker</th>
-                                                <th>Event</th>
-                                                <th>Timestamp</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            {viewReportsData.length === 0 ? (
-                                                <tr><td colSpan="3" style={{ textAlign: 'center' }}>No reports found.</td></tr>
-                                            ) : (
-                                                viewReportsData.map((r, i) => (
-                                                    <tr key={i}>
-                                                        <td>{r.Field_Worker_ID}</td>
-                                                        <td>{r.Event}</td>
-                                                        <td>{new Date(r.Timestamp).toLocaleDateString()}</td>
-                                                    </tr>
-                                                ))
-                                            )}
-                                        </tbody>
-                                    </table>
-                                </div>
-                                <div className="modal-actions">
-                                    <button className="btn btn-primary" onClick={() => setShowViewReports(false)}>Close</button>
-                                </div>
-
                             </div>
                         </div>
                     )}
