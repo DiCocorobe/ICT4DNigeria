@@ -512,6 +512,7 @@
 
                     // Add Polygons
                     if (eduPolygons && eduPolygons.length > 0) {
+                        const polyMarkers = [];
                         L.geoJSON({ type: "FeatureCollection", features: eduPolygons }, {
                             style: {
                                 color: '#10b981',
@@ -530,8 +531,21 @@
                                         </div>
                                     </div>
                                 `);
+
+                                // Add centroid to cluster markers
+                                if (layer.getBounds) {
+                                    const center = layer.getBounds().getCenter();
+                                    const centroidMarker = L.marker(center, { 
+                                        icon: L.divIcon({ className: 'hidden-marker' }), // Invisible marker for clustering
+                                        opacity: 0 // Keep it invisible but part of the cluster group
+                                    }).bindPopup(layer.getPopup()); // Share the same popup
+                                    polyMarkers.push(centroidMarker);
+                                }
                             }
                         }).addTo(eduPolyLayerRef.current);
+                        
+                        // Add the area centroids to the cluster group to include them in the count
+                        eduClusterGroupRef.current.addLayers(polyMarkers);
                     }
 
                     // Add Points to Cluster Group
