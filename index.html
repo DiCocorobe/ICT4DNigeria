@@ -240,50 +240,87 @@
 
         // --- Custom SVG Bar Chart (Zero Dependency) ---
         const SimpleChart = ({ data, isDark }) => {
-            if (!data || data.length === 0) return <div style={{fontSize: '0.8rem', opacity: 0.5}}>No data for chart</div>;
+            if (!data || data.length === 0) return <div style={{fontSize: '0.8rem', opacity: 0.5, height: '120px', display: 'flex', alignItems: 'center', justifyContent: 'center'}}>No data for chart</div>;
             
             const width = 350;
-            const height = 120;
-            const padding = 20;
+            const height = 150; // Increased height
+            const paddingLeft = 45; // Space for Y-axis labels
+            const paddingBottom = 25;
+            const paddingTop = 20;
+            const paddingRight = 10;
+            
+            const chartWidth = width - paddingLeft - paddingRight;
+            const chartHeight = height - paddingTop - paddingBottom;
+            
             const maxValue = Math.max(...data.map(d => d.events)) || 1;
-            const barWidth = (width - padding * 2) / data.length;
+            const barWidth = chartWidth / data.length;
 
             return (
-                <div style={{marginTop: '10px'}}>
-                    <div style={{fontSize: '0.875rem', fontWeight: 600, marginBottom: '8px'}}>Annual Conflict Events</div>
+                <div style={{marginTop: '15px', borderTop: '1px solid var(--border)', paddingTop: '15px'}}>
+                    <div style={{fontSize: '0.875rem', fontWeight: 600, marginBottom: '12px', display: 'flex', justifyContent: 'space-between'}}>
+                        <span>Annual Conflict Events</span>
+                        <span style={{fontSize: '0.75rem', opacity: 0.6}}>Total: {data.reduce((a, b) => a + b.events, 0)}</span>
+                    </div>
                     <svg width="100%" height={height} viewBox={`0 0 ${width} ${height}`} preserveAspectRatio="xMidYMid meet">
-                        {/* Y-Axis Grid */}
-                        {[0, 0.5, 1].map(tick => (
-                            <line 
-                                key={tick}
-                                x1={padding} 
-                                y1={height - padding - (tick * (height - padding * 2))}
-                                x2={width - padding} 
-                                y2={height - padding - (tick * (height - padding * 2))}
-                                stroke={isDark ? '#334155' : '#e2e8f0'}
-                                strokeDasharray="4"
-                            />
-                        ))}
+                        {/* Y-Axis Lines and Labels */}
+                        {[0, 0.5, 1].map(tick => {
+                            const yPos = height - paddingBottom - (tick * chartHeight);
+                            const val = Math.round(tick * maxValue);
+                            return (
+                                <g key={tick}>
+                                    <line 
+                                        x1={paddingLeft} 
+                                        y1={yPos}
+                                        x2={width - paddingRight} 
+                                        y2={yPos}
+                                        stroke={isDark ? '#334155' : '#e2e8f0'}
+                                        strokeDasharray={tick === 0 ? "0" : "4"}
+                                    />
+                                    <text 
+                                        x={paddingLeft - 8} 
+                                        y={yPos + 4} 
+                                        textAnchor="end" 
+                                        className="chart-text"
+                                        style={{fontSize: '9px'}}
+                                        fill={isDark ? '#94a3b8' : '#64748b'}
+                                    >
+                                        {val}
+                                    </text>
+                                </g>
+                            );
+                        })}
+
+                        {/* Y-Axis Vertical Line */}
+                        <line 
+                            x1={paddingLeft} 
+                            y1={paddingTop} 
+                            x2={paddingLeft} 
+                            y2={height - paddingBottom} 
+                            stroke={isDark ? '#475569' : '#cbd5e1'} 
+                        />
                         
                         {/* Bars */}
                         {data.map((d, i) => {
-                            const barHeight = (d.events / maxValue) * (height - padding * 2);
+                            const barHeight = (d.events / maxValue) * chartHeight;
+                            const x = paddingLeft + i * barWidth + 2;
+                            const y = height - paddingBottom - barHeight;
+                            
                             return (
                                 <g key={d.year}>
                                     <rect 
-                                        x={padding + i * barWidth + 2}
-                                        y={height - padding - barHeight}
-                                        width={barWidth - 4}
+                                        x={x}
+                                        y={y}
+                                        width={Math.max(barWidth - 4, 1)}
                                         height={barHeight}
                                         className="simple-bar"
-                                        rx="2"
+                                        rx="1"
                                     >
-                                        <title>{d.year}: {d.events} events</title>
+                                        <title>{d.year}: {d.events} incidents</title>
                                     </rect>
                                     {(i % 5 === 0 || i === data.length - 1) && (
                                         <text 
-                                            x={padding + i * barWidth + barWidth/2} 
-                                            y={height - 5} 
+                                            x={x + (barWidth - 4)/2} 
+                                            y={height - 8} 
                                             textAnchor="middle" 
                                             className="chart-text"
                                             fill={isDark ? '#94a3b8' : '#64748b'}
@@ -560,7 +597,18 @@
                         Papa.parse('filtered_conflict_data.csv', {
                             download: true, header: true, skipEmptyLines: true,
                             complete: (results) => {
-                                setData(results.data.filter(d => d.latitude && d.longitude));
+                                const cleaned = results.data
+                                    .filter(d => d.latitude && d.longitude && d.year)
+                                    .map(d => ({
+                                        ...d,
+                                        year: parseInt(String(d.year).trim()),
+                                        best: parseInt(d.best) || 0,
+                                        latitude: parseFloat(d.latitude),
+                                        longitude: parseFloat(d.longitude)
+                                    }))
+                                    .filter(d => !isNaN(d.year) && !isNaN(d.latitude));
+                                
+                                setData(cleaned);
                             }
                         });
 
@@ -609,8 +657,20 @@
 
             const chartData = useMemo(() => {
                 const counts = {};
-                filteredData.forEach(d => { counts[d.year] = (counts[d.year] || 0) + 1; });
-                return Object.keys(counts).sort().map(year => ({ year, events: counts[year] }));
+                // Initialize all years to 0 to ensure coherence in the timeline
+                for (let y = 2000; y <= 2024; y++) { counts[y] = 0; }
+                
+                filteredData.forEach(d => { 
+                    const year = parseInt(d.year);
+                    if (year >= 2000 && year <= 2024) {
+                        counts[year] = (counts[year] || 0) + 1; 
+                    }
+                });
+                
+                return Object.keys(counts).sort((a,b) => a-b).map(year => ({ 
+                    year: parseInt(year), 
+                    events: counts[year] 
+                }));
             }, [filteredData]);
 
             const nwCount = filteredData.filter(d => d.Analysis_Region === 'North West').length;
